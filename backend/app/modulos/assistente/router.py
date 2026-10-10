@@ -1,16 +1,22 @@
-from fastapi import APIRouter, Request, BackgroundTasks
+from fastapi import APIRouter, Request, BackgroundTasks, Header, HTTPException, status
 import httpx
 from app.nucleo.config import settings
 
 router = APIRouter()
 
 @router.post("/webhook/whatsapp")
-async def receber_mensagem(request: Request, background_tasks: BackgroundTasks):
+async def receber_mensagem(request: Request, background_tasks: BackgroundTasks, apikey: str = Header(None, alias="apikey")):
+    
+    if not apikey or apikey != settings.AUTHENTICATION_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Acesso não autorizado: API Key inválida ou ausente."
+        )
+    
     payload = await request.json()
-
     event = payload.get("event", "")
 
-    # Filtra apenas mensagens recebidas no evento v2
+    # Filtra apenas mensagens recebidas no evento
     if event == "messages.upsert":
         data = payload.get("data", {})
         key = data.get("key", {})
