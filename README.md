@@ -1,5 +1,8 @@
 # Vero
 
+[![CI](https://github.com/beatrizbranfb/Vero/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beatrizbranfb/Vero/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/beatrizbranfb/Vero/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/beatrizbranfb/Vero/actions/workflows/codeql.yml)
+
 **Gestão financeira simples, acessível e sem linguagem contábil.**
 
 O Vero é uma plataforma web de gestão financeira pessoal e familiar, pensada para pessoas com mais dificuldade com tecnologia, como idosos, mas abrangente o bastante para atender qualquer perfil. Com ele, o usuário registra o que entra e sai, sabe quanto ainda tem disponível no mês e é avisado antes de as contas vencerem, pelo aplicativo ou por mensagens no WhatsApp.
@@ -92,7 +95,7 @@ A lista completa (RF01 a RF34 e histórias de usuário US01 a US34) está nos do
 
 | Camada | Tecnologias |
 |---|---|
-| Backend | Python, FastAPI, Django |
+| Backend | Python, FastAPI |
 | Frontend | React, Next.js |
 | Banco de dados | PostgreSQL com Supabase |
 | Integrações | WhatsApp (texto, áudio e foto), leitura de QR Code de nota fiscal, API REST/JSON sobre HTTPS |
@@ -132,6 +135,7 @@ Os documentos do projeto ficam na pasta [`Docs`](../Docs):
 - Backlog do Produto
 - Planejamento das Sprints
 - Documento de Arquitetura *(em elaboração)*
+- [Plano de Testes](docs/qualidade/plano-de-testes.md)
 
 ## Equipe
 
