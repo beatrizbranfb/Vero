@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "DJ"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py", "test_*.py"]
+
+[tool.coverage.run]
+omit = ["*/migrations/*", "manage.py", "config/asgi.py", "config/wsgi.py"]

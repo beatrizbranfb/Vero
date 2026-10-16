@@ -1,0 +1,24 @@
+services:
+  # Django: usa o banco do Supabase (definido no DATABASE_URL do .env)
+  backend:
+    build: ./backend
+    env_file: .env
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  # Postgres local: usado apenas para rodar os testes
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: vero
+      POSTGRES_PASSWORD: vero
+      POSTGRES_DB: vero
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vero -d vero"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
