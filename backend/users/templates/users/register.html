@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Vero - Cadastro de Conta</title>
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+        body { font-family: 'Inter', sans-serif; }
+        </style>
+    </head>
+    <body class="bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen flex items-center justify-center p-4">
+
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 sm:p-10 border border-gray-100">
+
+            <!-- Header da Página -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl mb-4 font-bold text-xl shadow-inner">
+                    📱
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Crie sua conta no Vero</h1>
+                <p class="text-sm text-gray-500 mt-1">Insira seu celular e defina uma senha</p>
+            </div>
+
+            <!-- Formulário de Cadastro (Agora envia diretamente via POST para o Django) -->
+            <form action="{% url 'users:register' %}" method="POST" class="space-y-5">
+                {% csrf_token %}
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                    <input
+                        type="text"
+                        id="name"
+                        required
+                        placeholder="Seu nome completo"
+                        class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition text-sm text-gray-800"
+                        name="nome"
+                    >
+                </div>
+
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Número de Celular</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 text-sm font-medium">+55</span>
+                        <input
+                            type="tel"
+                            id="phone"
+                            required
+                            placeholder="(11) 98765-4321"
+                            oninput="formatPhone(this)"
+                            maxlength="15"
+                            class="w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition text-sm text-gray-800"
+                            name="telefone"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                    <input
+                        type="password"
+                        id="password"
+                        required
+                        placeholder="••••••••"
+                        minlength="6"
+                        class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition text-sm text-gray-800"
+                        name="senha"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">Mínimo de 6 caracteres</p>
+                </div>
+
+                <button
+                    type="submit"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition duration-200 shadow-lg shadow-indigo-200 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                    Cadastrar
+                </button>
+            </form>
+
+            <!-- Rodapé do Card -->
+            <div class="mt-8 text-center border-t border-gray-100 pt-5">
+                <p class="text-xs text-gray-500">Já tem uma conta? <a href="{% url 'users:login' %}" class="text-indigo-600 font-semibold hover:underline">Faça login</a></p>
+            </div>
+        </div>
+
+        <script>
+        // Mantém apenas a função que formata o telefone visualmente
+        function formatPhone(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+
+            if (value.length > 6) {
+                value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+            } else if (value.length > 2) {
+                value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+            } else if (value.length > 0) {
+                value = `(${value}`;
+            }
+            input.value = value;
+        }
+        </script>
+    </body>
+</html>
