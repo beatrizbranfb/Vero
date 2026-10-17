@@ -5,7 +5,7 @@ from django.db import models
 
 # Create your models here.
 class User(models.Model):
-    idUsuario = models.UUIDField(primary_key=True, default=uuid4(), editable=False)
+    idUsuario = models.UUIDField(primary_key=True, default=uuid4, editable=False)
 
     noUsuario = models.CharField(max_length=255)
     nuTelefone = models.CharField(max_length=255, unique=True)
