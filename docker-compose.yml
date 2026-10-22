@@ -1,6 +1,17 @@
 services:
+  # API FastAPI: usa o banco do Supabase (definido no DATABASE_URL do .env)
+  # Migrations: docker compose run --rm backend alembic upgrade head
+  backend:
+    build: ./backend
+    env_file: .env
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  #WhatsApp Evolution API (Serviços independentes para o assistente)
   evolution-api:
-    container_name: evolution_api
+    container_name: evolution-api
     image: evoapicloud/evolution-api:latest
     restart: always
     ports:
@@ -10,36 +21,36 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
-      - redis
+      - postgres-evolution
+      - valkey-evolution
     volumes:
       - evolution_instances:/evolution/instances
 
-  postgres:
-    container_name: postgres
+  postgres-evolution:
+    container_name: postgres-evolution
     image: postgres:15
     command: ["postgres", "-c", "max_connections=1000"]
     restart: always
     ports:
-      - 5432:5432
+      - "5433:5432" # 5433 para não conflitar com o banco da API
     environment:
       - POSTGRES_PASSWORD=postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    expose:
-      - 5432
-
-  redis:
-    image: redis:latest
-    container_name: redis
+      - postgres_evolution_data:/var/lib/postgresql/data
+  
+  valkey-evolution:
+    container_name: valkey-evolution
+    image: valkey/valkey:8-bookworm
     command: >
-      redis-server --port 6379 --appendonly yes
+      valkey-server --port 6379 --appendonly yes
+    restart: always
     volumes:
-      - redis:/data
+      - valkey_evolution_data:/data
     ports:
-      - 6379:6379
+      - "6379:6379"
 
 volumes:
   evolution_instances:
-  redis:
-  postgres_data:
+  postgres_evolution_data:
+  valkey_evolution_data:
+    

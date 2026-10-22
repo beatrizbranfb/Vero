@@ -1,4 +1,27 @@
+# Secrets
 .env
-venv/
+.env.*
+!.env.example
+
+# Python
 __pycache__/
+*.py[cod]
+.venv/
+venv/
 .pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+
+# Sistema e editores
+.DS_Store
+.vscode/
+.idea/
+>>>>>>> feature/autenticação
