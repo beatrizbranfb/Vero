@@ -1,4 +1,1 @@
 ruff
-pytest
-pytest-django
-pytest-cov
