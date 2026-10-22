@@ -2,6 +2,7 @@
 
 import math
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -11,10 +12,14 @@ from app.modulos.identidade.esquemas import CadastroEntrada
 from app.modulos.identidade.modelos import Usuario
 from app.modulos.identidade.seguranca import HASH_FICTICIO, conferir_hash, gerar_hash
 
-MAX_TENTATIVAS = 5
-TEMPO_BLOQUEIO = timedelta(seconds=30)
-DURACAO_TOKEN_SENHA = timedelta(days=7)
-DURACAO_TOKEN_PIN = timedelta(hours=2)
+
+class Attempts(Enum):
+    """política de tempo e número de tentativas de acesso do usuario"""
+
+    MAX_TENTATIVAS = 5
+    TEMPO_BLOQUEIO = timedelta(seconds=30)
+    DURACAO_TOKEN_SENHA = timedelta(days=7)
+    DURACAO_TOKEN_PIN = timedelta(hours=2)
 
 
 class TelefoneJaCadastrado(Exception):
@@ -85,13 +90,13 @@ def autenticar(sessao: Session, telefone: str, segredo: str, metodo: str) -> Usu
 
     if not conferir_hash(segredo, hash_salvo):
         usuario.tentativas += 1
-        bloqueou = usuario.tentativas >= MAX_TENTATIVAS
+        bloqueou = usuario.tentativas >= Attempts.MAX_TENTATIVAS.value
         if bloqueou:
             usuario.tentativas = 0
-            usuario.bloqueado_ate = agora + TEMPO_BLOQUEIO
+            usuario.bloqueado_ate = agora + Attempts.TEMPO_BLOQUEIO.value
         sessao.commit()
         if bloqueou:
-            raise ContaBloqueada(int(TEMPO_BLOQUEIO.total_seconds()))
+            raise ContaBloqueada(int(Attempts.TEMPO_BLOQUEIO.value.total_seconds()))
         raise CredenciaisInvalidas
 
     usuario.tentativas = 0

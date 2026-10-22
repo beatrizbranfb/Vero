@@ -3,7 +3,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.modulos.identidade import mensagens, servico
+from app.modulos.identidade import servico
 from app.modulos.identidade.esquemas import (
     CadastroEntrada,
     DefinirPinEntrada,
@@ -12,8 +12,10 @@ from app.modulos.identidade.esquemas import (
     TokenSaida,
     UsuarioSaida,
 )
+from app.modulos.identidade.mensagens import Message
 from app.modulos.identidade.modelos import Usuario
 from app.modulos.identidade.seguranca import criar_token, usuario_atual
+from app.modulos.identidade.servico import Attempts
 from app.nucleo.banco import obter_sessao
 
 router = APIRouter(prefix="/api/v1/auth", tags=["autenticação"])
@@ -29,11 +31,11 @@ def cadastrar(
         return servico.cadastrar(sessao, dados)
     except servico.TelefoneJaCadastrado:
         raise HTTPException(
-            status.HTTP_409_CONFLICT, mensagens.TELEFONE_JA_CADASTRADO
+            status.HTTP_409_CONFLICT, Message.TELEFONE_JA_CADASTRADO.message
         ) from None
     except servico.EmailJaCadastrado:
         raise HTTPException(
-            status.HTTP_409_CONFLICT, mensagens.EMAIL_JA_CADASTRADO
+            status.HTTP_409_CONFLICT, Message.EMAIL_JA_CADASTRADO.message
         ) from None
 
 
@@ -46,8 +48,8 @@ def entrar_com_senha(
         dados.telefone,
         dados.senha,
         "senha",
-        servico.DURACAO_TOKEN_SENHA,
-        mensagens.DADOS_DE_ENTRADA_ERRADOS,
+        Attempts.DURACAO_TOKEN_SENHA.value,
+        Message.DADOS_DE_ENTRADA_ERRADOS.message,
     )
 
 
@@ -60,8 +62,8 @@ def entrar_com_pin(
         dados.telefone,
         dados.pin,
         "pin",
-        servico.DURACAO_TOKEN_PIN,
-        mensagens.PIN_ERRADO,
+        Attempts.DURACAO_TOKEN_PIN.value,
+        Message.PIN_ERRADO.message,
     )
 
 
@@ -90,13 +92,13 @@ def _entrar(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, mensagem_erro) from None
     except servico.PinNaoCriado:
         raise HTTPException(
-            status.HTTP_409_CONFLICT, mensagens.PIN_NAO_CRIADO
+            status.HTTP_409_CONFLICT, Message.PIN_NAO_CRIADO.message
         ) from None
     except servico.ContaBloqueada as erro:
         segundos = erro.segundos_restantes
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            mensagens.CONTA_BLOQUEADA.format(segundos=segundos),
+            Message.CONTA_BLOQUEADA.message.format(segundos=segundos),
             headers={"Retry-After": str(segundos)},
         ) from None
 
