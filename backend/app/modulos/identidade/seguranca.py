@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.modulos.identidade import mensagens
+from app.modulos.identidade.mensagens import Message
 from app.modulos.identidade.modelos import Usuario
 from app.nucleo.banco import obter_sessao
 from app.nucleo.config import settings
@@ -57,7 +57,7 @@ def usuario_atual(
     """Dependência das rotas que exigem login."""
     nao_autorizado = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=mensagens.SESSAO_INVALIDA,
+        detail=Message.SESSAO_INVALIDA,
         headers={"WWW-Authenticate": "Bearer"},
     )
     if credenciais is None:

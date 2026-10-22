@@ -1,0 +1,49 @@
+name: Bug
+description: Registrar um defeito encontrado em teste
+labels: [bug]
+body:
+  - type: input
+    id: cartao
+    attributes:
+      label: Cartão do Trello
+      description: Link do cartão cujo critério de aceite falhou
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir
+      placeholder: |
+        1. Abrir o app em celular 360px
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: obtido
+    attributes:
+      label: Resultado obtido
+      description: Inclua print ou gravação, se possível
+    validations:
+      required: true
+  - type: dropdown
+    id: gravidade
+    attributes:
+      label: Gravidade
+      options:
+        - Crítica (impede o fluxo)
+        - Alta (fluxo funciona com dificuldade)
+        - Média
+        - Baixa (cosmético)
+    validations:
+      required: true
+  - type: input
+    id: ambiente
+    attributes:
+      label: Ambiente
+      placeholder: staging, Chrome Android 14, 360px

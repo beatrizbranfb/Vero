@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, StringConstraints
 
-from app.modulos.identidade import mensagens
+from app.modulos.identidade.mensagens import Message
 
 
 def normalizar_telefone(valor: str) -> str:
@@ -13,22 +13,22 @@ def normalizar_telefone(valor: str) -> str:
     if len(digitos) in (10, 11):
         digitos = "55" + digitos
     if not (len(digitos) in (12, 13) and digitos.startswith("55")):
-        raise ValueError(mensagens.TELEFONE_INVALIDO)
+        raise ValueError(Message.TELEFONE_INVALIDO.message)
     return digitos
 
 
 def validar_pin(valor: str) -> str:
     if not re.fullmatch(r"\d{4,6}", valor):
-        raise ValueError(mensagens.PIN_INVALIDO)
+        raise ValueError(Message.PIN_INVALIDO.message)
     return valor
 
 
 def validar_senha(valor: str) -> str:
     if len(valor) < 8:
-        raise ValueError(mensagens.SENHA_CURTA)
+        raise ValueError(Message.SENHA_CURTA.message)
     # O bcrypt só aceita até 72 bytes
     if len(valor.encode()) > 72:
-        raise ValueError(mensagens.SENHA_LONGA)
+        raise ValueError(Message.SENHA_LONGA.message)
     return valor
 
 
