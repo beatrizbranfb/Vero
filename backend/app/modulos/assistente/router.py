@@ -1,6 +1,14 @@
+from app.modulos.assistente.mensagens import mensagem_nao_compreendida
+from app.modulos.assistente.mensagens import usuario_nao_encontrado
 from fastapi import APIRouter, Request, BackgroundTasks, Header, HTTPException, status
 import httpx
+from sqlalchemy import select
+
 from app.nucleo.config import settings
+from app.modulos.assistente.extrator import TipoTransacao, processar_texto_mensagem
+from app.modulos.assistente import mensagens
+from app.modulos.identidade.modelos import Usuario
+from app.nucleo.banco import obter_sessao_banco
 
 router = APIRouter()
 
@@ -40,11 +48,30 @@ async def receber_mensagem(request: Request, background_tasks: BackgroundTasks, 
 
     return {"status": "SUCCESS"}
 
-async def processar_responder(remetente: str, texto: str):
-    # Lógica do assistente (LLM / Agente)
-    resposta_ia = f"Recebi sua mensagem no Vero: '{texto}'"
+def buscar_usuario_telefone(telefone: str) -> Usuario | None:
+    with obter_sessao_banco() as sessao:
+        stmt = select(Usuario).where(Usuario.telefone.like(f"%{telefone[-8:]}%"))
+        return sessao.scalars(stmt).first()
 
-    await enviar_mensagem(remetente, resposta_ia)
+async def processar_responder(remetente: str, texto: str):
+    telefone = remetente.split("@")[0] if "@" in remetente else remetente
+
+    usuario = buscar_usuario_telefone(telefone)
+    if not usuario:
+        resposta = usuario_nao_encontrado()
+        await enviar_mensagem(remetente, resposta)
+        return
+
+    intencao = processar_texto_mensagem(texto)
+
+    if not intencao.sucesso or intencao.valor is None:
+        resposta = mensagem_nao_compreendida()
+    elif intencao.tipo == TipoTransacao.RECEITA:
+        resposta = mensagens.confirmacao_renda(intencao.valor, intencao.categoria)
+    else:
+        resposta = mensagens.confirmacao_gasto(intencao.valor, intencao.categoria)
+    
+    await enviar_mensagem(remetente, resposta)
 
 async def enviar_mensagem(destinatario: str, texto: str):
     url = f"{settings.EVOLUTION_URL}/message/sendText/{settings.INSTANCE_NAME}"
