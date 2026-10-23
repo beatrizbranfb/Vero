@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vero - Preview: Criar PIN (Passo 3)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+  <nav class="preview-nav-bar">
+    <strong>Preview de Telas:</strong>
+    <div class="preview-nav-links">
+      <a href="1-inicio.html">1. Tela Inicial</a>
+      <a href="2-anotar-gasto.html">2. Anotar Gasto</a>
+      <a href="3-cadastro-passo1.html">3. Cadastro</a>
+      <a href="4-cadastro-passo2.html">4. Código SMS</a>
+      <a href="5-cadastro-pin.html" class="active">5. Criar PIN</a>
+      <a href="6-entrar.html">6. Login</a>
+      <a href="7-confirmacao.html">7. Confirmação</a>
+      <a href="index.html">Ver Todas</a>
+    </div>
+  </nav>
+
+  <div class="page-container">
+    <header class="navbar">
+      <a href="1-inicio.html" class="brand-logo">
+        <svg class="icon" viewBox="0 0 36 36" style="width:34px; height:34px; stroke-width:5; stroke:var(--violeta-vero);"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
+        <span>Vero</span>
+      </a>
+    </header>
+
+    <div class="card-formulario vero-card">
+      <span style="font-weight:700; color:var(--ardosia);">Passo 3 de 3</span>
+      <h1 class="titulo-tela" style="margin-top:4px;">Crie seu PIN numérico</h1>
+      <p class="subtitulo-tela">Escolha 4 números fáceis de lembrar para entrar no aplicativo:</p>
+
+      <!-- Display dos 4 Dígitos do PIN Anti-Vazamento -->
+      <div class="pin-container">
+        <div class="pin-digito filled">•</div>
+        <div class="pin-digito filled">•</div>
+        <div class="pin-digito filled">•</div>
+        <div class="pin-digito filled">•</div>
+      </div>
+
+      <!-- Teclado Numérico 64px -->
+      <div class="keypad-grid">
+        <button type="button" class="key-btn">1</button>
+        <button type="button" class="key-btn">2</button>
+        <button type="button" class="key-btn">3</button>
+        <button type="button" class="key-btn">4</button>
+        <button type="button" class="key-btn">5</button>
+        <button type="button" class="key-btn">6</button>
+        <button type="button" class="key-btn">7</button>
+        <button type="button" class="key-btn">8</button>
+        <button type="button" class="key-btn">9</button>
+        <button type="button" class="key-btn action">Limpar</button>
+        <button type="button" class="key-btn">0</button>
+        <button type="button" class="key-btn action" aria-label="Apagar">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+        </button>
+      </div>
+
+      <a href="7-confirmacao.html" class="btn btn-primary">Confirmar e salvar PIN</a>
+    </div>
+  </div>
+
+</body>
+</html>
