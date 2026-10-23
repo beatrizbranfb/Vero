@@ -14,8 +14,11 @@ venv/
 coverage.xml
 htmlcov/
 
-# Node / Next.js
+# Node / Frontend (Vite & Next.js)
 node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
 .next/
 out/
 coverage/
