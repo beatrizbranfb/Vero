@@ -1,12 +1,13 @@
-from app.modulos.assistente.mensagens import mensagem_nao_compreendida
-from app.modulos.assistente.mensagens import usuario_nao_encontrado
 from fastapi import APIRouter, Request, BackgroundTasks, Header, HTTPException, status
 import httpx
 from sqlalchemy import select
 
 from app.nucleo.config import settings
+from app.modulos.assistente.mensagens import mensagem_nao_compreendida
+from app.modulos.assistente.mensagens import usuario_nao_encontrado
 from app.modulos.assistente.extrator import TipoTransacao, processar_texto_mensagem
 from app.modulos.assistente import mensagens
+from app.modulos.assistente.sessao import sessao_assistente
 from app.modulos.identidade.modelos import Usuario
 from app.nucleo.banco import obter_sessao_banco
 
@@ -62,14 +63,45 @@ async def processar_responder(remetente: str, texto: str):
         await enviar_mensagem(remetente, resposta)
         return
 
+    pendencia, expirou = sessao_assistente.obter_pendencia(telefone)
+
+    if expirou:
+        await enviar_mensagem(remetente, mensagens.confirmacao_expirada())
+        return
+
+    if pendencia:
+        if sessao_assistente.resposta_sim(texto):
+            sessao_assistente.limpar_pendencia(telefone)
+            if pendencia.tipo == TipoTransacao.RECEITA:
+                resposta = mensagens.confirmacao_sucesso_renda(pendencia.valor, pendencia.categoria)
+            else:
+                resposta = mensagens.confirmacao_sucesso_gasto(pendencia.valor, pendencia.categoria)
+            await enviar_mensagem(remetente, resposta)
+            return
+
+        if sessao_assistente.resposta_nao(texto):
+            sessao_assistente.limpar_pendencia(telefone)
+            await enviar_mensagem(remetente, mensagens.registro_cancelado())
+            return
+
+        sessao_assistente.limpar_pendencia(telefone)
+
     intencao = processar_texto_mensagem(texto)
 
     if not intencao.sucesso or intencao.valor is None:
         resposta = mensagem_nao_compreendida()
-    elif intencao.tipo == TipoTransacao.RECEITA:
-        resposta = mensagens.confirmacao_renda(intencao.valor, intencao.categoria)
     else:
-        resposta = mensagens.confirmacao_gasto(intencao.valor, intencao.categoria)
+        sessao_assistente.salvar_pendencia(
+            telefone = telefone,
+            tipo = intencao.tipo,
+            valor = intencao.valor,
+            categoria = intencao.categoria,
+            descricao = intencao.descricao,
+        )
+        if intencao.tipo == TipoTransacao.RECEITA:
+            resposta = mensagens.confirmacao_renda(intencao.valor, intencao.categoria)
+        else:
+            resposta = mensagens.confirmacao_gasto(intencao.valor, intencao.categoria)
     
     await enviar_mensagem(remetente, resposta)
 

@@ -9,12 +9,20 @@ def confirmacao_gasto(valor_centavos: int, categoria: str) -> str:
         f"Posso anotar esse gasto? (Responda com *Sim* ou *Não*)"
     )
 
+def confirmacao_sucesso_gasto(valor_centavos: int, categoria: str) -> str:
+    valor = formatar_moeda(valor_centavos)
+    return f"Anotado! Já registrei o seu gasto de {valor} com {categoria}."
+
 def confirmacao_renda(valor_centavos: int, categoria: str) -> str:
     valor = formatar_moeda(valor_centavos)
     return (
         f"Entendi! Você recebeu {valor} de {categoria}.\n\n"
         f"Posso anotar esse rendimento? (Responda com *Sim* ou *Não*)"
     )
+
+def confirmacao_sucesso_renda(valor_centavos: int, categoria: str) -> str:
+    valor = formatar_moeda(valor_centavos)
+    return f"Anotado! Já registrei a sua entrada de {valor} de {categoria}."
 
 def usuario_nao_encontrado() -> str:
     return (
@@ -28,4 +36,13 @@ def mensagem_nao_compreendida() -> str:
         "Você pode me mandar uma mensagem como:\n"
         "👉 *Gastei 35 na farmácia*\n"
         "👉 *Recebi 1500 da aposentadoria*"
+    )
+
+def registro_cancelado() -> str:
+    return "Tudo bem, não anotei nada. Quando quiser registrar, é só me mandar!"
+
+def confirmacao_expirada() -> str:
+    return (
+        "Como passei um tempinho sem resposta, acabei não anotando aquele valor por segurança.\n\n"
+        "Se quiser registrar, pode me mandar novamente!"
     )
