@@ -12,84 +12,89 @@
 <body>
 
   <nav class="preview-nav-bar">
-    <strong>Preview de Telas:</strong>
     <div class="preview-nav-links">
-      <a href="1-inicio.html">1. Tela Inicial</a>
-      <a href="2-anotar-gasto.html">2. Anotar Gasto</a>
-      <a href="3-cadastro-passo1.html">3. Cadastro</a>
-      <a href="4-cadastro-passo2.html">4. Código SMS</a>
-      <a href="5-cadastro-pin.html">5. Criar PIN</a>
-      <a href="6-entrar.html" class="active">6. Login</a>
-      <a href="7-confirmacao.html">7. Confirmação</a>
-      <a href="index.html">Ver Todas</a>
+      <a href="index.html">Vero</a>
+      <a href="login.html" class="active" aria-current="page">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
     </div>
+    <button type="button" class="menu-btn" aria-label="Abrir menu de telas" aria-expanded="false" aria-controls="menu-telas">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
+
+  <!-- Menu lateral com todas as telas -->
+  <div class="menu-fundo" hidden></div>
+  <aside id="menu-telas" class="menu-lateral" aria-hidden="true" aria-label="Telas do aplicativo">
+    <div class="menu-topo">
+      <strong>Telas</strong>
+      <button type="button" class="menu-fechar" aria-label="Fechar menu">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="menu-links">
+      <a href="index.html">Vero</a>
+      <a href="login.html" class="active" aria-current="page">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
+    </div>
+  </aside>
 
   <div class="page-container">
     <header class="navbar">
-      <a href="1-inicio.html" class="brand-logo">
+      <a href="inicio.html" class="brand-logo">
         <svg class="icon" viewBox="0 0 36 36" style="width:34px; height:34px; stroke-width:5; stroke:var(--violeta-vero);"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
         <span>Vero</span>
       </a>
-      <a href="3-cadastro-passo1.html" class="btn-secondary" style="width:auto; min-height:44px; padding:8px 16px; border-radius:12px; text-decoration:none;">Criar conta</a>
+      <a href="cadastro.html" class="navbar-btn btn-lilas btn-borda-preta">Criar conta</a>
     </header>
 
-    <div class="desktop-grid cadastro-grid-2col">
-      <!-- Painel Informativo Desktop -->
-      <aside class="hero-aside">
-        <span class="hero-badge">
-          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span>Acesso rápido e protegido</span>
-        </span>
-        <h1 class="hero-title">Suas finanças na palma da sua mão.</h1>
-        <p class="hero-description">Digite seu celular e sua senha de 4 números para conferir o saldo disponível e anotar gastos.</p>
-        <div class="pillar-item">
-          <div class="pillar-icon"><svg class="icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div><strong>Sem senhas difíceis</strong><span>Apenas 4 números no teclado grande.</span></div>
-        </div>
-      </aside>
+    <!-- Card de Login -->
+    <div class="card-formulario vero-card">
+      <h1 class="titulo-tela">Entrar na Vero</h1>
+      <p class="subtitulo-tela">Digite seu celular e sua senha de <strong>4 números</strong> para conferir o saldo disponível e anotar gastos.</p>
 
-      <!-- Card de Login -->
-      <div class="vero-card">
-        <h2 class="titulo-tela">Entrar na Vero</h2>
-        <p class="subtitulo-tela">Digite seu celular e seu PIN numérico:</p>
+      <div class="campo-grupo">
+        <label class="campo-label" for="login-celular">Celular com DDD</label>
+        <input id="login-celular" type="text" class="campo-input" value="(61) 99888-7766" />
+      </div>
 
-        <div class="campo-grupo">
-          <label class="campo-label" for="login-celular">Celular com DDD</label>
-          <input id="login-celular" type="text" class="campo-input" value="(61) 99888-7766" />
-        </div>
+      <div class="pin-container">
+        <div class="pin-digito"></div>
+        <div class="pin-digito"></div>
+        <div class="pin-digito"></div>
+        <div class="pin-digito"></div>
+      </div>
+      <p id="pin-aviso" class="pin-aviso" role="status"></p>
 
-        <div class="pin-container">
-          <div class="pin-digito filled">•</div>
-          <div class="pin-digito filled">•</div>
-          <div class="pin-digito filled">•</div>
-          <div class="pin-digito filled">•</div>
-        </div>
+      <div class="keypad-grid">
+        <button type="button" class="key-btn">1</button>
+        <button type="button" class="key-btn">2</button>
+        <button type="button" class="key-btn">3</button>
+        <button type="button" class="key-btn">4</button>
+        <button type="button" class="key-btn">5</button>
+        <button type="button" class="key-btn">6</button>
+        <button type="button" class="key-btn">7</button>
+        <button type="button" class="key-btn">8</button>
+        <button type="button" class="key-btn">9</button>
+        <button type="button" class="key-btn action">Limpar</button>
+        <button type="button" class="key-btn">0</button>
+        <button type="button" class="key-btn action" aria-label="Apagar">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+        </button>
+      </div>
 
-        <div class="keypad-grid">
-          <button type="button" class="key-btn">1</button>
-          <button type="button" class="key-btn">2</button>
-          <button type="button" class="key-btn">3</button>
-          <button type="button" class="key-btn">4</button>
-          <button type="button" class="key-btn">5</button>
-          <button type="button" class="key-btn">6</button>
-          <button type="button" class="key-btn">7</button>
-          <button type="button" class="key-btn">8</button>
-          <button type="button" class="key-btn">9</button>
-          <button type="button" class="key-btn action">Limpar</button>
-          <button type="button" class="key-btn">0</button>
-          <button type="button" class="key-btn action" aria-label="Apagar">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
-          </button>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <a href="1-inicio.html" class="btn btn-primary">Entrar</a>
-          <a href="3-cadastro-passo1.html" class="btn btn-secondary">Ainda não tenho conta na Vero</a>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <a href="inicio.html" class="btn btn-primary" onclick="if (!VeroPin.exigirCompleto()) event.preventDefault()">Entrar</a>
+        <div class="botoes-lado-a-lado">
+          <a href="cadastro.html" class="btn btn-lilas btn-borda-preta">Não tenho conta na Vero</a>
+          <a href="codigo-sms.html?recuperar=1" class="btn btn-lilas btn-borda-preta">Esqueceu sua senha?</a>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="pin.js"></script>
+  <script src="nav.js"></script>
 </body>
 </html>

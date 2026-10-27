@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vero - Boas-vindas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+  <nav class="preview-nav-bar">
+    <div class="preview-nav-links">
+      <a href="index.html" class="active" aria-current="page">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
+    </div>
+    <button type="button" class="menu-btn" aria-label="Abrir menu de telas" aria-expanded="false" aria-controls="menu-telas">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Menu lateral com todas as telas -->
+  <div class="menu-fundo" hidden></div>
+  <aside id="menu-telas" class="menu-lateral" aria-hidden="true" aria-label="Telas do aplicativo">
+    <div class="menu-topo">
+      <strong>Telas</strong>
+      <button type="button" class="menu-fechar" aria-label="Fechar menu">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="menu-links">
+      <a href="index.html" class="active" aria-current="page">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
+    </div>
+  </aside>
+
+  <main class="page-container boas-vindas">
+    <div class="boas-vindas-logo">
+      <svg class="icon" viewBox="0 0 36 36" aria-hidden="true"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
+      <span>Vero</span>
+    </div>
+
+    <span class="hero-badge">
+      <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Acesso rápido e protegido</span>
+    </span>
+    <h1 class="hero-title">Suas finanças na palma da sua mão.</h1>
+
+    <a href="login.html" class="btn btn-primary boas-vindas-btn">Fazer login</a>
+  </main>
+
+  <script src="nav.js"></script>
+</body>
+</html>

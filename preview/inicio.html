@@ -11,33 +11,47 @@
 </head>
 <body>
 
-  <!-- Menu de alternância entre previews -->
-  <nav class="preview-nav-bar">
-    <strong>Preview de Telas:</strong>
+    <nav class="preview-nav-bar">
     <div class="preview-nav-links">
-      <a href="1-inicio.html" class="active">1. Tela Inicial</a>
-      <a href="2-anotar-gasto.html">2. Anotar Gasto</a>
-      <a href="3-cadastro-passo1.html">3. Cadastro</a>
-      <a href="4-cadastro-passo2.html">4. Código SMS</a>
-      <a href="5-cadastro-pin.html">5. Criar PIN</a>
-      <a href="6-entrar.html">6. Login</a>
-      <a href="7-confirmacao.html">7. Confirmação</a>
-      <a href="index.html">Ver Todas</a>
+      <a href="index.html">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html" class="active" aria-current="page">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
     </div>
+    <button type="button" class="menu-btn" aria-label="Abrir menu de telas" aria-expanded="false" aria-controls="menu-telas">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
+
+  <!-- Menu lateral com todas as telas -->
+  <div class="menu-fundo" hidden></div>
+  <aside id="menu-telas" class="menu-lateral" aria-hidden="true" aria-label="Telas do aplicativo">
+    <div class="menu-topo">
+      <strong>Telas</strong>
+      <button type="button" class="menu-fechar" aria-label="Fechar menu">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="menu-links">
+      <a href="index.html">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html" class="active" aria-current="page">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
+    </div>
+  </aside>
 
   <div class="page-container">
     <header class="navbar">
-      <a href="1-inicio.html" class="brand-logo">
+      <a href="inicio.html" class="brand-logo">
         <svg class="icon" viewBox="0 0 36 36" style="width:34px; height:34px; stroke-width:5; stroke:var(--violeta-vero);"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
         <span>Vero</span>
       </a>
-      <a href="6-entrar.html" class="btn-secondary" style="width:auto; min-height:44px; padding:8px 16px; border-radius:12px; text-decoration:none;">Sair</a>
+      <a href="login.html" class="navbar-btn btn-lilas btn-borda-preta">Sair</a>
     </header>
 
     <div class="desktop-grid desktop-grid-2col">
-      <!-- Coluna Principal -->
-      <section>
+      <!-- Coluna Principal: saldo, últimos valores e botões -->
+      <section class="coluna">
         <div class="vero-card" style="margin-bottom: 24px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <span style="font-weight:700; color:var(--ardosia);">Você ainda tem disponível no mês:</span>
@@ -47,45 +61,275 @@
             </button>
           </div>
 
-          <div class="saldo-valor">R$ 2.500,00</div>
+          <div id="saldo-valor" class="saldo-valor">R$ 0,00</div>
 
-          <div class="barra-progresso">
-            <div class="barra-fill"></div>
+          <!-- Indicador de quanto já foi gasto, sem precisar ler números -->
+          <div class="barra-progresso" aria-hidden="true">
+            <div id="barra-disponivel" class="barra-fill"></div>
           </div>
-          <span style="font-size:15px; color:var(--ardosia);">Mais da metade do seu dinheiro continua disponível.</span>
+          <span id="texto-disponivel" style="font-size:16px; color:var(--ardosia);"></span>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:14px;">
-          <a href="2-anotar-gasto.html" class="btn btn-primary">Registrar gasto</a>
-          <a href="https://wa.me/5561999998888" target="_blank" class="btn btn-secondary">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-            <span>Anotar pelo WhatsApp</span>
-          </a>
+        <div class="vero-card">
+          <h2 style="font-family:var(--font-titulo); font-size:22px; margin-bottom:16px;">Últimos valores anotados</h2>
+          <div id="lista-ultimos" style="display:flex; flex-direction:column; gap:12px;"></div>
         </div>
       </section>
 
-      <!-- Coluna Lateral -->
-      <aside class="vero-card">
-        <h2 style="font-family:var(--font-titulo); font-size:22px; margin-bottom:16px;">Últimos gastos anotados</h2>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--nevoa); border-radius:14px;">
-            <div>
-              <strong style="text-transform:capitalize;">Mercado</strong>
-              <span style="display:block; font-size:14px; color:var(--ardosia);">Hoje</span>
+      <!-- Coluna Lateral: meta e gráfico -->
+      <aside class="coluna">
+        <!-- Meta mensal -->
+        <div class="vero-card" style="margin-bottom: 24px;">
+          <label class="campo-label" for="meta-valor">Meta de saldo do mês</label>
+          <div class="meta-linha">
+            <div class="meta-campo">
+              <span aria-hidden="true">R$</span>
+              <input id="meta-valor" type="text" inputmode="numeric" class="campo-input" autocomplete="off" />
             </div>
-            <strong style="color:var(--erro-texto); font-size:20px;">- R$ 120,00</strong>
+            <button type="button" class="btn btn-primary meta-btn" onclick="salvarMeta()">Salvar meta</button>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--nevoa); border-radius:14px;">
-            <div>
-              <strong style="text-transform:capitalize;">Farmácia</strong>
-              <span style="display:block; font-size:14px; color:var(--ardosia);">Ontem</span>
-            </div>
-            <strong style="color:var(--erro-texto); font-size:20px;">- R$ 45,00</strong>
+          <span id="meta-aviso" role="status" style="display:block; font-size:16px; color:var(--ardosia); margin-top:6px;">Quanto você quer ter guardado no fim do mês.</span>
+          <strong id="texto-meta" style="display:block; font-size:16px; margin-top:6px;"></strong>
+        </div>
+
+        <!-- Gráfico do mês -->
+        <div class="vero-card">
+          <h2 style="font-family:var(--font-titulo); font-size:22px; margin-bottom:6px;">Seu saldo no mês</h2>
+          <div class="grafico-legenda">
+            <span><i class="legenda-linha legenda-saldo"></i>Saldo disponível</span>
+            <span><i class="legenda-linha legenda-meta"></i>Meta de saldo</span>
           </div>
+          <div id="grafico" class="grafico" role="img" aria-label="Gráfico de linha do saldo disponível em cada dia do mês comparado com a meta de saldo">
+            <div id="grafico-dica" class="grafico-dica" hidden></div>
+          </div>
+          <details class="grafico-tabela">
+            <summary>Ver valores em tabela</summary>
+            <table>
+              <thead><tr><th scope="col">Dia</th><th scope="col">Saldo</th><th scope="col">Meta</th></tr></thead>
+              <tbody id="tabela-corpo"></tbody>
+            </table>
+          </details>
         </div>
       </aside>
+
+      <!-- Botões alinhados na mesma linha -->
+      <a href="anotar-gasto.html" class="btn btn-primary">Anotar gasto ou entrada</a>
+      <a href="https://wa.me/5561999998888" target="_blank" class="btn btn-lilas btn-borda-preta" style="min-height:60px;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <span>Anotar pelo WhatsApp</span>
+      </a>
     </div>
   </div>
 
+  <script src="dados.js"></script>
+  <script>
+    const moeda = VeroDados.moeda;
+    const SVG = 'http://www.w3.org/2000/svg';
+
+    function el(nome, attrs, pai) {
+      const n = document.createElementNS(SVG, nome);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      if (pai) pai.appendChild(n);
+      return n;
+    }
+
+    function saldoAtual() {
+      const pontos = VeroDados.saldoPorDia();
+      return pontos[pontos.length - 1].saldo;
+    }
+
+    function atualizarResumo() {
+      const saldo = saldoAtual();
+      const meta = VeroDados.meta;
+      document.getElementById('saldo-valor').innerText = moeda(saldo);
+
+      // Parte do dinheiro que entrou no mês que ainda está disponível
+      const entradas = VeroDados.itens.filter((i) => i.tipo === 'entrada').reduce((t, i) => t + i.valor, 0);
+      const fracao = entradas > 0 ? Math.max(0, Math.min(1, saldo / entradas)) : 0;
+      const barra = document.getElementById('barra-disponivel');
+      barra.style.width = (fracao * 100) + '%';
+      barra.style.background = fracao > 0.5 ? 'var(--sucesso-texto)' : fracao > 0.25 ? 'var(--aviso-texto)' : 'var(--erro-texto)';
+      document.getElementById('texto-disponivel').innerText =
+        fracao > 0.5 ? 'Mais da metade do seu dinheiro continua disponível.'
+        : fracao > 0.25 ? 'Menos da metade do seu dinheiro continua disponível.'
+        : fracao > 0 ? 'Seu dinheiro do mês está acabando.'
+        : 'Você já gastou todo o dinheiro do mês.';
+
+      document.getElementById('texto-meta').innerText = saldo >= meta
+        ? 'Seu saldo está acima da meta do mês.'
+        : `Faltam ${moeda(meta - saldo)} para chegar na meta do mês.`;
+    }
+
+    function atualizarLista() {
+      const lista = document.getElementById('lista-ultimos');
+      lista.innerHTML = '';
+      const itens = VeroDados.itens.sort((a, b) => b.dia - a.dia || b.id - a.id).slice(0, 4);
+      itens.forEach((i) => {
+        const quando = i.dia === VeroDados.diaHoje ? 'Hoje' : i.dia === VeroDados.diaHoje - 1 ? 'Ontem' : `Dia ${i.dia}`;
+        const entrada = i.tipo === 'entrada';
+        const linha = document.createElement('div');
+        linha.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--nevoa); border-radius:14px;';
+        linha.innerHTML = `<div><strong></strong><span style="display:block; font-size:14px; color:var(--ardosia);"></span></div>
+          <strong style="font-size:20px; color:${entrada ? 'var(--sucesso-texto)' : 'var(--erro-texto)'};"></strong>`;
+        linha.querySelector('div strong').innerText = i.categoria;
+        linha.querySelector('div span').innerText = quando;
+        linha.lastElementChild.innerText = `${entrada ? '+' : '-'} ${moeda(i.valor)}`;
+        lista.appendChild(linha);
+      });
+    }
+
+    function desenharGrafico() {
+      const caixa = document.getElementById('grafico');
+      const dica = document.getElementById('grafico-dica');
+      caixa.querySelectorAll('svg').forEach((s) => s.remove());
+
+      const pontos = VeroDados.saldoPorDia();
+      const meta = VeroDados.meta;
+      const dias = VeroDados.diasNoMes;
+      const largura = caixa.clientWidth;
+      const altura = 360;
+      const m = { topo: 16, dir: 16, base: 34, esq: 84 };
+      const w = largura - m.esq - m.dir;
+      const h = altura - m.topo - m.base;
+
+      // Escala de 100 em 100
+      const valores = pontos.map((p) => p.saldo).concat(meta);
+      const minimo = Math.min(...valores);
+      let lo = Math.floor(minimo / 100) * 100 - 100;
+      if (minimo >= 0) lo = Math.max(0, lo);
+      const hi = Math.ceil(Math.max(...valores) / 100) * 100 + 100;
+      const passos = (hi - lo) / 100;
+      // Linha de grade a cada R$ 100; o valor aparece em todas quando cabe, senão a cada 200, 500...
+      const pulo = [1, 2, 5, 10, 20, 50].find((k) => h / passos * k >= 20) || 100;
+
+      const x = (d) => m.esq + (dias === 1 ? 0 : (d - 1) / (dias - 1) * w);
+      const y = (v) => m.topo + (hi - v) / (hi - lo) * h;
+
+      const svg = el('svg', { width: largura, height: altura, viewBox: `0 0 ${largura} ${altura}`, 'aria-hidden': 'true' });
+
+      // Grade e eixo Y
+      for (let i = 0; i <= passos; i++) {
+        const v = lo + i * 100;
+        const rotulo = i % pulo === 0;
+        el('line', { x1: m.esq, x2: m.esq + w, y1: y(v), y2: y(v), class: rotulo ? 'grade' : 'grade grade-fina' }, svg);
+        if (rotulo) {
+          const t = el('text', { x: m.esq - 8, y: y(v), class: 'eixo-texto', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, svg);
+          t.textContent = 'R$ ' + v.toLocaleString('pt-BR');
+        }
+      }
+
+      // Eixo X (dias do mês)
+      const marcas = [1, 5, 10, 15, 20, 25, dias].filter((d, i, arr) => arr.indexOf(d) === i && (d === dias || dias - d >= 3));
+      let ultimaMarca = -Infinity;
+      marcas.forEach((d) => {
+        // Pula a marca se ficar colada na anterior (telas estreitas)
+        const espaco = d === 1 ? 0 : 40;
+        if (x(d) - ultimaMarca < espaco) return;
+        ultimaMarca = x(d) + (d === 1 ? 22 : 0);
+        const t = el('text', { x: x(d), y: altura - 8, class: 'eixo-texto', 'text-anchor': d === 1 ? 'start' : 'middle' }, svg);
+        t.textContent = d === 1 ? 'Dia 1' : d;
+      });
+
+      // Linha da meta (azul, tracejada)
+      el('line', { x1: x(1), x2: x(dias), y1: y(meta), y2: y(meta), class: 'linha-meta' }, svg);
+
+      // Linha do saldo (roxa)
+      const caminho = pontos.map((p, i) => `${i ? 'L' : 'M'}${x(p.dia)},${y(p.saldo)}`).join(' ');
+      el('path', { d: caminho, class: 'linha-saldo' }, svg);
+
+      // Rótulos diretos: valor de hoje e "Meta"
+      const ultimo = pontos[pontos.length - 1];
+      el('circle', { cx: x(ultimo.dia), cy: y(ultimo.saldo), r: 5, class: 'ponto-saldo' }, svg);
+      const acima = ultimo.saldo >= meta;
+      const cabeADireita = x(ultimo.dia) + 110 <= m.esq + w;
+      const tSaldo = el('text', {
+        x: x(ultimo.dia) + (cabeADireita ? 10 : -10),
+        y: y(ultimo.saldo),
+        class: 'rotulo-direto',
+        'text-anchor': cabeADireita ? 'start' : 'end',
+        'dominant-baseline': 'middle'
+      }, svg);
+      tSaldo.textContent = moeda(ultimo.saldo);
+      const tMeta = el('text', { x: x(dias), y: y(meta) + (acima ? 20 : -8), class: 'rotulo-direto', 'text-anchor': 'end' }, svg);
+      tMeta.textContent = 'Meta';
+
+      // Interação: linha guia e dica ao passar o mouse ou tocar
+      const guia = el('line', { y1: m.topo, y2: m.topo + h, class: 'guia', visibility: 'hidden' }, svg);
+      const marcador = el('circle', { r: 5, class: 'ponto-saldo', visibility: 'hidden' }, svg);
+      const area = el('rect', { x: m.esq, y: m.topo, width: w, height: h, fill: 'transparent' }, svg);
+
+      function mostrar(evento) {
+        const r = svg.getBoundingClientRect();
+        const px = evento.clientX - r.left;
+        const d = Math.max(1, Math.min(dias, Math.round((px - m.esq) / w * (dias - 1)) + 1));
+        const p = pontos.find((q) => q.dia === d);
+        guia.setAttribute('x1', x(d));
+        guia.setAttribute('x2', x(d));
+        guia.setAttribute('visibility', 'visible');
+        if (p) {
+          marcador.setAttribute('cx', x(d));
+          marcador.setAttribute('cy', y(p.saldo));
+          marcador.setAttribute('visibility', 'visible');
+        } else {
+          marcador.setAttribute('visibility', 'hidden');
+        }
+        dica.innerHTML = `<strong>Dia ${d}</strong>`
+          + (p ? `<span><i class="legenda-linha legenda-saldo"></i>Saldo: ${moeda(p.saldo)}</span>` : '')
+          + `<span><i class="legenda-linha legenda-meta"></i>Meta: ${moeda(meta)}</span>`;
+        dica.hidden = false;
+        const cabeDireita = x(d) + 12 + dica.offsetWidth <= largura;
+        dica.style.left = (cabeDireita ? x(d) + 12 : Math.max(0, x(d) - dica.offsetWidth - 12)) + 'px';
+        dica.style.top = m.topo + 'px';
+      }
+
+      function esconder() {
+        guia.setAttribute('visibility', 'hidden');
+        marcador.setAttribute('visibility', 'hidden');
+        dica.hidden = true;
+      }
+
+      area.addEventListener('pointermove', mostrar);
+      area.addEventListener('pointerdown', mostrar);
+      area.addEventListener('pointerleave', esconder);
+
+      caixa.insertBefore(svg, dica);
+
+      // Tabela com os mesmos valores
+      const corpo = document.getElementById('tabela-corpo');
+      corpo.innerHTML = '';
+      pontos.forEach((p) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${p.dia}</td><td>${moeda(p.saldo)}</td><td>${moeda(meta)}</td>`;
+        corpo.appendChild(tr);
+      });
+    }
+
+    function salvarMeta() {
+      const campo = document.getElementById('meta-valor');
+      const valor = parseInt(campo.value.replace(/\D/g, ''), 10);
+      const aviso = document.getElementById('meta-aviso');
+      if (!valor) {
+        aviso.innerText = 'Digite um valor para a meta, por exemplo 2000.';
+        return;
+      }
+      VeroDados.definirMeta(valor);
+      campo.value = valor.toLocaleString('pt-BR');
+      aviso.innerText = `Meta salva: ${moeda(valor)}.`;
+      atualizarTudo();
+    }
+
+    function atualizarTudo() {
+      atualizarResumo();
+      atualizarLista();
+      desenharGrafico();
+    }
+
+    document.getElementById('meta-valor').value = VeroDados.meta.toLocaleString('pt-BR');
+    document.getElementById('meta-valor').addEventListener('keydown', (e) => { if (e.key === 'Enter') salvarMeta(); });
+    window.addEventListener('resize', desenharGrafico);
+    atualizarTudo();
+  </script>
+
+  <script src="nav.js"></script>
 </body>
 </html>

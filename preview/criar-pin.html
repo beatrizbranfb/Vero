@@ -12,39 +12,55 @@
 <body>
 
   <nav class="preview-nav-bar">
-    <strong>Preview de Telas:</strong>
     <div class="preview-nav-links">
-      <a href="1-inicio.html">1. Tela Inicial</a>
-      <a href="2-anotar-gasto.html">2. Anotar Gasto</a>
-      <a href="3-cadastro-passo1.html">3. Cadastro</a>
-      <a href="4-cadastro-passo2.html">4. Código SMS</a>
-      <a href="5-cadastro-pin.html" class="active">5. Criar PIN</a>
-      <a href="6-entrar.html">6. Login</a>
-      <a href="7-confirmacao.html">7. Confirmação</a>
-      <a href="index.html">Ver Todas</a>
+      <a href="index.html">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
     </div>
+    <button type="button" class="menu-btn" aria-label="Abrir menu de telas" aria-expanded="false" aria-controls="menu-telas">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
+
+  <!-- Menu lateral com todas as telas -->
+  <div class="menu-fundo" hidden></div>
+  <aside id="menu-telas" class="menu-lateral" aria-hidden="true" aria-label="Telas do aplicativo">
+    <div class="menu-topo">
+      <strong>Telas</strong>
+      <button type="button" class="menu-fechar" aria-label="Fechar menu">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="menu-links">
+      <a href="index.html">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
+    </div>
+  </aside>
 
   <div class="page-container">
     <header class="navbar">
-      <a href="1-inicio.html" class="brand-logo">
+      <a href="inicio.html" class="brand-logo">
         <svg class="icon" viewBox="0 0 36 36" style="width:34px; height:34px; stroke-width:5; stroke:var(--violeta-vero);"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
         <span>Vero</span>
       </a>
     </header>
 
     <div class="card-formulario vero-card">
-      <span style="font-weight:700; color:var(--ardosia);">Passo 3 de 3</span>
-      <h1 class="titulo-tela" style="margin-top:4px;">Crie seu PIN numérico</h1>
+      <span id="pin-passo" style="font-weight:700; color:var(--ardosia);">Passo 3 de 3</span>
+      <h1 id="pin-titulo" class="titulo-tela" style="margin-top:4px;">Crie seu PIN numérico</h1>
       <p class="subtitulo-tela">Escolha 4 números fáceis de lembrar para entrar no aplicativo:</p>
 
       <!-- Display dos 4 Dígitos do PIN Anti-Vazamento -->
       <div class="pin-container">
-        <div class="pin-digito filled">•</div>
-        <div class="pin-digito filled">•</div>
-        <div class="pin-digito filled">•</div>
-        <div class="pin-digito filled">•</div>
+        <div class="pin-digito"></div>
+        <div class="pin-digito"></div>
+        <div class="pin-digito"></div>
+        <div class="pin-digito"></div>
       </div>
+      <p id="pin-aviso" class="pin-aviso" role="status"></p>
 
       <!-- Teclado Numérico 64px -->
       <div class="keypad-grid">
@@ -64,9 +80,55 @@
         </button>
       </div>
 
-      <a href="7-confirmacao.html" class="btn btn-primary">Confirmar e salvar PIN</a>
+      <button type="button" class="btn btn-primary" onclick="if (VeroPin.exigirCompleto()) confirmar()">Confirmar e salvar PIN</button>
     </div>
   </div>
 
+  <!-- Confirmação exibida na própria tela -->
+  <div id="confirmacao" class="confirmacao-overlay" hidden>
+    <div class="celebration-box" role="dialog" aria-modal="true" aria-labelledby="confirmacao-titulo" style="max-width:540px; width:100%;">
+      <div style="width:110px; height:110px; border-radius:999px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; margin-bottom:24px;">
+        <svg style="width:64px; height:64px; stroke:white; stroke-width:5; fill:none; stroke-linecap:round; stroke-linejoin:round;" viewBox="0 0 36 36"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
+      </div>
+
+      <h1 id="confirmacao-titulo" style="font-family:var(--font-titulo); font-size:clamp(30px, 6vw, 40px); font-weight:900; margin-bottom:12px;">Tudo certo!</h1>
+      <p id="confirmacao-msg" style="font-size:clamp(18px, 4.5vw, 22px); margin-bottom:32px; opacity:0.95;">Seu PIN foi criado e sua conta está pronta.</p>
+
+      <div style="width:100%; max-width:360px; display:flex; flex-direction:column; gap:12px;">
+        <a href="inicio.html" class="btn" style="background:white; color:var(--violeta-profundo);">Ir para a tela inicial</a>
+        <button type="button" id="btn-desfazer" class="btn" style="background:transparent; border-color:white; color:white;" onclick="desfazer()">Desfazer (10s)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let contagem;
+    function confirmar() {
+      let segundos = 10;
+      const btn = document.getElementById('btn-desfazer');
+      btn.hidden = false;
+      btn.innerText = 'Desfazer (10s)';
+      document.getElementById('confirmacao').hidden = false;
+      clearInterval(contagem);
+      contagem = setInterval(() => {
+        segundos--;
+        if (segundos <= 0) { clearInterval(contagem); btn.hidden = true; }
+        else { btn.innerText = `Desfazer (${segundos}s)`; }
+      }, 1000);
+    }
+    function desfazer() {
+      clearInterval(contagem);
+      document.getElementById('confirmacao').hidden = true;
+    }
+  </script>
+  <script>
+    if (new URLSearchParams(location.search).has('recuperar')) {
+      document.getElementById('pin-passo').innerText = 'Recuperar senha · Passo 2 de 2';
+      document.getElementById('pin-titulo').innerText = 'Crie seu novo PIN';
+      document.getElementById('confirmacao-msg').innerText = 'Seu novo PIN foi salvo. Use ele para entrar na Vero.';
+    }
+  </script>
+  <script src="pin.js"></script>
+  <script src="nav.js"></script>
 </body>
 </html>

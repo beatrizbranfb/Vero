@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Tokens do brandbook do Vero (mesmos valores de preview/shared.css). */
+@theme {
+  --color-violeta: #7c3aed;
+  --color-violeta-profundo: #5b21b6;
+  --color-violeta-claro: #a78bfa;
+  --color-grafite: #1a1a2e;
+  --color-ardosia: #4b4b63;
+  --color-lavanda: #ede9fe;
+  --color-nevoa: #f7f5ff;
+  --color-borda: #d8d4e8;
+  --color-borda-card: #e9e4f8;
+  --color-sucesso-texto: #15803d;
+  --color-sucesso-fundo: #dcfce7;
+  --color-aviso-texto: #b45309;
+  --color-aviso-fundo: #fef3c7;
+  --color-erro-texto: #b91c1c;
+  --color-erro-fundo: #fee2e2;
+
+  /* Série da meta no gráfico: azul que passou no teste de daltonismo junto com o violeta. */
+  --color-serie-meta: #0284c7;
+
+  --font-titulo: var(--font-nunito), sans-serif;
+  --font-corpo: var(--font-atkinson), sans-serif;
+  --font-sans: var(--font-atkinson), sans-serif;
+}
+
+html {
+  /* Corpo de texto em 18px, como no preview. */
+  font-size: 18px;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--color-nevoa);
+  color: var(--color-grafite);
+  font-family: var(--font-corpo);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Evita o zoom por toque duplo ao digitar rápido no teclado numérico. */
+button {
+  touch-action: manipulation;
+}

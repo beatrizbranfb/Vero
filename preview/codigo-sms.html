@@ -12,31 +12,46 @@
 <body>
 
   <nav class="preview-nav-bar">
-    <strong>Preview de Telas:</strong>
     <div class="preview-nav-links">
-      <a href="1-inicio.html">1. Tela Inicial</a>
-      <a href="2-anotar-gasto.html">2. Anotar Gasto</a>
-      <a href="3-cadastro-passo1.html">3. Cadastro</a>
-      <a href="4-cadastro-passo2.html" class="active">4. Código SMS</a>
-      <a href="5-cadastro-pin.html">5. Criar PIN</a>
-      <a href="6-entrar.html">6. Login</a>
-      <a href="7-confirmacao.html">7. Confirmação</a>
-      <a href="index.html">Ver Todas</a>
+      <a href="index.html">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
     </div>
+    <button type="button" class="menu-btn" aria-label="Abrir menu de telas" aria-expanded="false" aria-controls="menu-telas">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
+
+  <!-- Menu lateral com todas as telas -->
+  <div class="menu-fundo" hidden></div>
+  <aside id="menu-telas" class="menu-lateral" aria-hidden="true" aria-label="Telas do aplicativo">
+    <div class="menu-topo">
+      <strong>Telas</strong>
+      <button type="button" class="menu-fechar" aria-label="Fechar menu">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="menu-links">
+      <a href="index.html">Vero</a>
+      <a href="login.html">Login</a>
+      <a href="inicio.html">Página Inicial</a>
+      <a href="anotar-gasto.html">Anotar</a>
+    </div>
+  </aside>
 
   <div class="page-container">
     <header class="navbar">
-      <a href="1-inicio.html" class="brand-logo">
+      <a href="inicio.html" class="brand-logo">
         <svg class="icon" viewBox="0 0 36 36" style="width:34px; height:34px; stroke-width:5; stroke:var(--violeta-vero);"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
         <span>Vero</span>
       </a>
-      <a href="3-cadastro-passo1.html" class="btn-secondary" style="width:auto; min-height:44px; padding:8px 16px; border-radius:12px; text-decoration:none;">Voltar</a>
+      <a id="sms-voltar" href="cadastro.html" class="btn-secondary navbar-btn">Voltar</a>
     </header>
 
     <div class="card-formulario vero-card">
-      <span style="font-weight:700; color:var(--ardosia);">Passo 2 de 3</span>
-      <h1 class="titulo-tela" style="margin-top:4px;">Código de confirmação</h1>
+      <span id="sms-passo" style="font-weight:700; color:var(--ardosia);">Passo 2 de 3</span>
+      <h1 id="sms-titulo" class="titulo-tela" style="margin-top:4px;">Código de confirmação</h1>
       <p class="subtitulo-tela">Digite o código de 6 números enviado por SMS para seu celular:</p>
 
       <div class="campo-grupo">
@@ -44,11 +59,23 @@
       </div>
 
       <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px;">
-        <a href="5-cadastro-pin.html" class="btn btn-primary">Confirmar código</a>
-        <a href="3-cadastro-passo1.html" class="btn btn-secondary">Corrigir número de celular</a>
+        <a id="sms-confirmar" href="criar-pin.html" class="btn btn-primary">Confirmar código</a>
+        <a id="sms-corrigir" href="cadastro.html" class="btn btn-secondary">Corrigir número de celular</a>
       </div>
     </div>
   </div>
 
+  <script>
+    // Recuperação de senha: mesmo código SMS, levando para criar um novo PIN
+    if (new URLSearchParams(location.search).has('recuperar')) {
+      document.getElementById('sms-passo').innerText = 'Recuperar senha · Passo 1 de 2';
+      document.getElementById('sms-titulo').innerText = 'Código para recuperar a senha';
+      document.getElementById('sms-voltar').href = 'login.html';
+      document.getElementById('sms-confirmar').href = 'criar-pin.html?recuperar=1';
+      document.getElementById('sms-corrigir').href = 'login.html';
+      document.getElementById('sms-corrigir').innerText = 'Voltar para o login';
+    }
+  </script>
+  <script src="nav.js"></script>
 </body>
 </html>
