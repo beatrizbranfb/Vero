@@ -141,10 +141,10 @@ Os documentos do projeto ficam na pasta [`Docs`](../Docs):
 
 | Integrante | Matrícula | Papel |
 |---|---|---|
-| Andris G | 251018246 | Product Owner, Arquitetura |
-| Beatriz B | 242005202 | Analista de Qualidade, Arquitetura |
-| Ryan H | 242005436 | Scrum Master, Desenvolvedor Frontend |
-| Sabrina | 24103979 | Desenvolvedora Frontend |
-| João V | 231012254 | Desenvolvedor Backend |
-| Gabriel M | 232002735 | Desenvolvedor Backend, Cliente |
-| Gabriel S | 231012209 | Desenvolvedor Backend, Cliente |
+| Andris Geraldo | 251018246 | Product Owner, Arquitetura |
+| Beatriz Brandão | 242005202 | Analista de Qualidade, Arquitetura |
+| Ryan Hicky | 242005436 | Scrum Master, Desenvolvedor Frontend |
+| Sabrina Pariz | 241031979 | Desenvolvedora Frontend |
+| João Vitor | 231012254 | Desenvolvedor Backend |
+| Gabriel Monsores | 232002735 | Desenvolvedor Backend, Cliente |
+| Gabriel Severiano | 231012209 | Desenvolvedor Backend, Cliente |

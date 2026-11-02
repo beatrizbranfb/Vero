@@ -1,6 +1,7 @@
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from app.modulos.contas import modelos as modelos_contas  # noqa: F401
 from app.modulos.identidade import modelos  # noqa: F401  (registra as tabelas)
 from app.nucleo.banco import Base, url_sqlalchemy
 from app.nucleo.config import settings
