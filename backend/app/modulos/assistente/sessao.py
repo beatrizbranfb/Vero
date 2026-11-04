@@ -6,7 +6,7 @@ from app.modulos.assistente.extrator import TipoTransacao
 TEMPO_EXPIRACAO_MINUTOS = 15
 
 RESPOSTAS_SIM = {"sim", "s", "pode", "isso", "claro", "confirmo", "correto", "pode ser", "anota"}
-RESPOSTAS_NAO = {"nao", "n", "cancela", "cancelar", "errei", "errado", "espera"}
+RESPOSTAS_NAO = {"não", "nao", "n", "cancela", "cancelar", "errei", "errado", "espera"}
 
 @dataclass
 class RegistroPendente:

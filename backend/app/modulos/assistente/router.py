@@ -9,7 +9,7 @@ from app.modulos.assistente.extrator import TipoTransacao, processar_texto_mensa
 from app.modulos.assistente import mensagens
 from app.modulos.assistente.sessao import sessao_assistente
 from app.modulos.identidade.modelos import Usuario
-from app.nucleo.banco import obter_sessao_banco
+from app.nucleo.banco import SessaoLocal
 
 router = APIRouter()
 
@@ -50,7 +50,7 @@ async def receber_mensagem(request: Request, background_tasks: BackgroundTasks, 
     return {"status": "SUCCESS"}
 
 def buscar_usuario_telefone(telefone: str) -> Usuario | None:
-    with obter_sessao_banco() as sessao:
+    with SessaoLocal() as sessao:
         stmt = select(Usuario).where(Usuario.telefone.like(f"%{telefone[-8:]}%"))
         return sessao.scalars(stmt).first()
 
