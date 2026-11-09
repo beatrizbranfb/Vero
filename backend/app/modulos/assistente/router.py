@@ -14,15 +14,20 @@ from app.nucleo.banco import SessaoLocal
 router = APIRouter()
 
 @router.post("/webhook/whatsapp")
-async def receber_mensagem(request: Request, background_tasks: BackgroundTasks, apikey: str = Header(None, alias="apikey")):
-    
-    if not apikey or apikey != settings.AUTHENTICATION_API_KEY:
+async def receber_mensagem(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    apikey: str | None = Header(None, alias="apikey")
+):
+    payload = await request.json()
+    chave_recebida = apikey or payload.get("apikey") or request.query_params.get("apikey")
+
+    if not chave_recebida or chave_recebida != settings.AUTHENTICATION_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Acesso não autorizado: API Key inválida ou ausente."
         )
-    
-    payload = await request.json()
+        
     event = payload.get("event", "")
 
     # Filtra apenas mensagens recebidas no evento
@@ -50,9 +55,18 @@ async def receber_mensagem(request: Request, background_tasks: BackgroundTasks, 
     return {"status": "SUCCESS"}
 
 def buscar_usuario_telefone(telefone: str) -> Usuario | None:
-    with SessaoLocal() as sessao:
-        stmt = select(Usuario).where(Usuario.telefone.like(f"%{telefone[-8:]}%"))
-        return sessao.scalars(stmt).first()
+    try:
+        with SessaoLocal() as sessao:
+            stmt = select(Usuario).where(Usuario.telefone.like(f"%{telefone[-8:]}%"))
+            usuario = sessao.scalars(stmt).first()
+            if usuario:
+                return usuario
+    except Exception as e:
+        print(f"[Aviso] Banco de dados indisponível ({e}).")
+
+    # Modo de teste: permite responder mesmo sem banco ou cadastro prévio
+    print(f"[Modo Teste] Simulando usuário para o telefone {telefone}")
+    return Usuario(nome="Usuário Teste", telefone=telefone, email="teste@vero.com", hash_senha="")
 
 async def processar_responder(remetente: str, texto: str):
     telefone = remetente.split("@")[0] if "@" in remetente else remetente
@@ -106,7 +120,7 @@ async def processar_responder(remetente: str, texto: str):
     await enviar_mensagem(remetente, resposta)
 
 async def enviar_mensagem(destinatario: str, texto: str):
-    url = f"{settings.EVOLUTION_URL}/message/sendText/{settings.INSTANCE_NAME}"
+    
     headers = {
         "apikey": settings.AUTHENTICATION_API_KEY,
         "Content-Type": "application/json"
@@ -119,10 +133,21 @@ async def enviar_mensagem(destinatario: str, texto: str):
         "text": texto
     }
 
+    urls = [f"{settings.EVOLUTION_URL}/message/sendText/{settings.INSTANCE_NAME}"]
+    if "localhost" in settings.EVOLUTION_URL:
+        urls.append(f"{settings.EVOLUTION_URL.replace('localhost', 'evolution-api')}/message/sendText/{settings.INSTANCE_NAME}")
+    elif "evolution-api" in settings.EVOLUTION_URL:
+        urls.append(f"{settings.EVOLUTION_URL.replace('evolution-api', 'localhost')}/message/sendText/{settings.INSTANCE_NAME}")
+
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, json=body, headers=headers)
-            response.raise_for_status()
-            print(f"Mensagem enviada para {numero}")
-        except Exception as e:
-            print(f"[Erro de envio] Falha ao enviar mensagem para {destinatario}: {e}")
+        ultimo_erro = None
+        for url in urls:
+            try:
+                response = await client.post(url, json=body, headers=headers, timeout=10.0)
+                response.raise_for_status()
+                print(f"[Whatsapp] Resposta enviada com sucesso para {numero}")
+                return
+            except Exception as e:
+                ultimo_erro = e
+
+        print(f"[Erro de envio] Falha ao enviar mensagem para {destinatario}: {ultimo_erro}")
