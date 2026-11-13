@@ -9,3 +9,4 @@ export * from './Icones/Icones';
 export * from './BarraNavegacao/BarraNavegacao';
 export * from './GraficoSaldo/GraficoSaldo';
 export * from './ConfirmacaoSucesso/ConfirmacaoSucesso';
+export * from './LeitorQrCode/LeitorQrCode';
