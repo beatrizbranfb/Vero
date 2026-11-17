@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.modulos.categorias.router import router as categorias_router
 from app.modulos.contas.router import router as contas_router
 from app.modulos.identidade.router import router as identidade_router
 from app.modulos.tempo_real.router import router as tempo_real_router
@@ -12,6 +13,7 @@ registrar_tratadores(app)
 
 app.include_router(identidade_router)
 app.include_router(contas_router)
+app.include_router(categorias_router)
 app.include_router(transacoes_router)
 app.include_router(tempo_real_router)
 

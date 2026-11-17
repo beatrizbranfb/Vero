@@ -8,7 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.modulos.contas.esquemas import ContaCadastroEntrada, ContaFixaVencida
+from app.modulos.contas.esquemas import (
+    ContaCadastroEntrada,
+    ContaDoMes,
+    ContaFixaVencida,
+)
 from app.modulos.contas.modelos import Conta
 from app.modulos.contas.recorrencia import gerar_proxima_recorrencia
 from app.modulos.contas.saldo import ESTRATEGIA_SALDO
@@ -126,3 +130,16 @@ def pagar_conta_fixa(sessao: Session, conta_id: uuid.UUID) -> None:
     if conta is None:
         raise ContaNaoEncontrada
     registrar_pagamento(sessao, conta)
+
+
+def contas_do_mes(
+    sessao: Session, usuario_id: uuid.UUID, inicio: date, fim: date
+) -> list[ContaDoMes]:
+    """RF19: contas do usuário que vencem entre `inicio` e `fim` (inclusive), pagas ou
+    não. A conta é um compromisso do mês: pagar não muda o saldo (RF30)."""
+    comando = select(Conta).where(
+        Conta.usuario_id == usuario_id,
+        Conta.vencimento_em >= inicio,
+        Conta.vencimento_em <= fim,
+    )
+    return [ContaDoMes.model_validate(conta) for conta in sessao.scalars(comando)]

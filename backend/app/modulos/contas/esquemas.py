@@ -85,3 +85,13 @@ class ContaFixaVencida(BaseModel):
     vencimento_em: date
     descricao: str | None
     categoria_id: int | None
+
+
+class ContaDoMes(BaseModel):
+    """O que o saldo do mês (RF19) precisa saber de cada conta. O módulo de transações
+    recebe estes dados pelo serviço de contas, sem ler a tblConta."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    valor: Decimal
