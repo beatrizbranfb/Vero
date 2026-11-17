@@ -105,3 +105,38 @@ class TransacaoSaida(BaseModel):
     categoria_id: int | None
     origem: OrigemTransacao
     criado_em: datetime
+
+
+class OrigemApp(StrEnum):
+    """Origens que o app pode informar. As do WhatsApp e a automática (RF18) só são
+    gravadas pelos próprios módulos."""
+
+    MANUAL = OrigemTransacao.MANUAL.value
+    QRCODE_NF = OrigemTransacao.QRCODE_NF.value
+
+
+class TransacaoAppEntrada(BaseModel):
+    """Gasto ou receita anotado no app (RF08, RF07). Vira um `TransacaoRegistroEntrada`."""
+
+    tipo: TipoTransacao
+    valor: Valor
+    origem: OrigemApp = OrigemApp.MANUAL
+    # Vazio: hoje, no fuso de Brasília
+    data: date | None = None
+    descricao: Descricao | None = None
+    categoria_id: int | None = None
+
+
+class SaldoMesSaida(BaseModel):
+    """Saldo do mês (RF19): entradas − gastos − contas do mês ainda não lançadas.
+
+    Contas pagas continuam descontadas, porque pagar não muda o saldo (RF30). A conta
+    fixa que o RF18 já lançou como gasto entra só uma vez, pelo gasto. O saldo pode
+    ficar negativo: o app mostra quanto falta, em vez de esconder com zero.
+    """
+
+    mes: str  # AAAA-MM
+    entradas: Decimal
+    gastos: Decimal
+    contas: Decimal
+    saldo: Decimal

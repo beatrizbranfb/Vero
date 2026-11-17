@@ -6,7 +6,9 @@ como o assistente do WhatsApp, registram chamando `registrar`.
 """
 
 import uuid
+from calendar import monthrange
 from datetime import date, datetime
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
@@ -16,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.modulos.contas import servico as servico_contas
 from app.modulos.transacoes.esquemas import (
     OrigemTransacao,
+    SaldoMesSaida,
     TipoTransacao,
     TransacaoEdicaoEntrada,
     TransacaoRegistroEntrada,
@@ -111,6 +114,59 @@ def excluir(sessao: Session, usuario_id: uuid.UUID, transacao_id: uuid.UUID) -> 
     lançamento automático não volta."""
     sessao.delete(_buscar(sessao, usuario_id, transacao_id))
     sessao.commit()
+
+
+def saldo_do_mes(
+    sessao: Session, usuario_id: uuid.UUID, ano: int, mes: int
+) -> SaldoMesSaida:
+    """RF19: saldo de um mês do calendário. As datas são as do lançamento e do
+    vencimento, que já estão no fuso de Brasília."""
+    inicio = date(ano, mes, 1)
+    fim = date(ano, mes, monthrange(ano, mes)[1])
+    totais = dict(
+        sessao.execute(
+            select(Transacao.tipo, func.coalesce(func.sum(Transacao.valor), 0))
+            .where(
+                Transacao.usuario_id == usuario_id,
+                Transacao.data >= inicio,
+                Transacao.data <= fim,
+            )
+            .group_by(Transacao.tipo)
+        ).all()
+    )
+    entradas = Decimal(totais.get(TipoTransacao.ENTRADA, 0))
+    gastos = Decimal(totais.get(TipoTransacao.SAIDA, 0))
+
+    contas = servico_contas.contas_do_mes(sessao, usuario_id, inicio, fim)
+    # Conta fixa que o RF18 já lançou: o gasto entra pela transação, não pela conta
+    lancadas = (
+        set(
+            sessao.scalars(
+                select(Transacao.conta_id).where(
+                    Transacao.conta_id.in_([c.id for c in contas])
+                )
+            )
+        )
+        if contas
+        else set()
+    )
+    total_contas = sum(
+        (c.valor for c in contas if c.id not in lancadas), start=Decimal(0)
+    )
+    centavos = Decimal("0.01")
+    return SaldoMesSaida(
+        mes=f"{ano:04d}-{mes:02d}",
+        entradas=entradas.quantize(centavos),
+        gastos=gastos.quantize(centavos),
+        contas=total_contas.quantize(centavos),
+        saldo=(entradas - gastos - total_contas).quantize(centavos),
+    )
+
+
+def mes_atual() -> tuple[int, int]:
+    """Ano e mês de hoje no fuso de Brasília."""
+    hoje = datetime.now(FUSO_BRASILIA).date()
+    return hoje.year, hoje.month
 
 
 def lancar_gastos_fixos(sessao: Session, hoje: date | None = None) -> int:

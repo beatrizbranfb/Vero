@@ -1,9 +1,8 @@
 """Ponto de extensão entre o pagamento da conta e o saldo do mês (RF30).
 
-A regra de negócio ainda está em aberto no time de produto. Nesta entrega,
-marcar uma conta como paga altera apenas o status da conta: o saldo do mês
-não é descontado. O módulo de saldo (RF19) também ainda não existe neste
-código, então qualquer efeito financeiro seria prematuro.
+Marcar uma conta como paga altera apenas o status da conta. O saldo do mês
+(RF19, `transacoes.servico.saldo_do_mes`) já desconta todas as contas que vencem
+no mês, pagas ou não, então pagar não muda o saldo.
 
 Quando a regra for definida, basta trocar ``ESTRATEGIA_SALDO`` por uma
 implementação que grave o lançamento correspondente, sem alterar o router,
