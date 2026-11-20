@@ -1,0 +1,344 @@
+.pageContainer {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--nevoa);
+  display: flex;
+  flex-direction: column;
+}
+
+.conteudo {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.cabecalhoSecao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.tituloPrincipal {
+  font-family: var(--font-titulo);
+  font-size: clamp(26px, 5vw, 32px);
+  font-weight: 900;
+  color: var(--grafite-noturno);
+  margin-bottom: 6px;
+}
+
+.subtituloPrincipal {
+  font-size: 16px;
+  color: var(--ardosia);
+}
+
+.gridResumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.cardResumo {
+  background-color: var(--branco);
+  border-radius: 18px;
+  padding: 16px 20px;
+  border: 2px solid #e9e4f8;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rotuloResumo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ardosia);
+}
+
+.valorResumo {
+  font-family: var(--font-titulo);
+  font-size: clamp(20px, 4vw, 24px);
+  font-weight: 900;
+}
+
+.valorPositivo {
+  color: var(--sucesso-texto);
+}
+
+.valorNegativo {
+  color: var(--erro-texto);
+}
+
+.valorAviso {
+  color: var(--aviso-texto);
+}
+
+.valorDestaque {
+  color: var(--violeta-profundo);
+}
+
+/* Filtros */
+.filtrosContainer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.btnFiltro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 2px solid #d8d4e8;
+  background-color: var(--branco);
+  color: var(--ardosia);
+  font-family: var(--font-corpo);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnFiltro:hover {
+  background-color: var(--nevoa);
+  border-color: var(--violeta-vero);
+}
+
+.btnFiltroAtivo {
+  background-color: var(--lavanda);
+  color: var(--violeta-profundo);
+  border-color: var(--violeta-vero);
+}
+
+/* Lista de Movimentações */
+.listaMovimentacoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardItem {
+  background-color: var(--branco);
+  border-radius: 18px;
+  padding: 16px 20px;
+  border: 1px solid #e9e4f8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 12px rgba(26, 26, 46, 0.03);
+  transition: border-color 0.15s ease;
+}
+
+.cardItem:hover {
+  border-color: #d8d4e8;
+}
+
+.infoEsquerda {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.iconeContainer {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background-color: var(--lavanda);
+  color: var(--violeta-profundo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.descricaoItem {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--grafite-noturno);
+  display: block;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ardosia);
+}
+
+.badgeTipo {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.badgeGasto {
+  background-color: #fee2e2;
+  color: var(--erro-texto);
+}
+
+.badgeConta {
+  background-color: #fef3c7;
+  color: var(--aviso-texto);
+}
+
+.badgeContaPaga {
+  background-color: #dcfce7;
+  color: var(--sucesso-texto);
+}
+
+.badgeEntrada {
+  background-color: #dcfce7;
+  color: var(--sucesso-texto);
+}
+
+.infoDireita {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.valorItem {
+  font-family: var(--font-titulo);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.btnApagar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--ardosia);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnApagar:hover {
+  background-color: #fee2e2;
+  color: var(--erro-texto);
+  border-color: #fca5a5;
+}
+
+.estadoVazio {
+  background-color: var(--branco);
+  border-radius: 20px;
+  padding: 40px 20px;
+  text-align: center;
+  border: 2px dashed #d8d4e8;
+  color: var(--ardosia);
+}
+
+/* Modal de edição do lançamento (RF10) */
+.overlayModal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(26, 26, 46, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.janelaModal {
+  background-color: var(--branco);
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+
+.tituloModal {
+  font-family: var(--font-titulo);
+  font-size: 22px;
+  color: var(--grafite-noturno);
+  margin: 0 0 6px;
+}
+
+.rotuloCampo {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--grafite-noturno);
+  margin-top: 6px;
+}
+
+.campoModal {
+  font-family: var(--font-corpo);
+  font-size: 18px;
+  padding: 12px 14px;
+  min-height: 50px;
+  border-radius: 12px;
+  border: 2px solid #cbd5e1;
+  color: var(--grafite-noturno);
+  background-color: var(--branco);
+  width: 100%;
+}
+
+.campoModal:focus-visible {
+  outline: 3px solid var(--violeta-vero);
+  outline-offset: 2px;
+  border-color: var(--violeta-vero);
+}
+
+.acoesModal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btnSalvarModal,
+.btnCancelarModal {
+  min-height: 50px;
+  border-radius: 14px;
+  font-family: var(--font-corpo);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btnSalvarModal {
+  background-color: var(--violeta-vero);
+  color: var(--branco);
+  border: none;
+}
+
+.btnSalvarModal:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.btnCancelarModal {
+  background-color: #f3f4f6;
+  color: var(--grafite-noturno);
+  border: 1px solid #d1d5db;
+}
+
+.btnSalvarModal:focus-visible,
+.btnCancelarModal:focus-visible {
+  outline: 3px solid var(--violeta-vero);
+  outline-offset: 2px;
+}
