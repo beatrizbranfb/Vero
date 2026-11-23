@@ -1,0 +1,12 @@
+{
+  "name": "vero-e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:mobile": "playwright test --project=celular-360"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.48.0"
+  }
+}

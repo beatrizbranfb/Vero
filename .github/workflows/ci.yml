@@ -2,9 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
+  # Também nos PRs para a dev: sem isso o PR #91 entrou sem CI e quebrou as migrations (#97)
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 permissions:
   contents: read
@@ -53,6 +54,13 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://vero:vero@localhost:5432/vero_test
+      # Sem APP_ENV a API assume produção e recusa subir com ENVIO_EMAIL=falso
+      APP_ENV: development
+      SECRET_KEY: chave-somente-para-os-testes-do-ci
+      # Obrigatórias no Settings desde o assistente no WhatsApp (Evolution API)
+      EVOLUTION_URL: http://localhost:8080
+      AUTHENTICATION_API_KEY: chave-somente-para-os-testes-do-ci
+      INSTANCE_NAME: vero-ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -105,12 +113,6 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Cache do build do Next.js
-        uses: actions/cache@v4
-        with:
-          path: frontend/.next/cache
-          key: nextjs-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/**/*.[jt]s', 'frontend/**/*.[jt]sx') }}
-          restore-keys: nextjs-${{ hashFiles('frontend/package-lock.json') }}-
       - name: Instalar dependências
         run: npm ci
       - name: Lint
@@ -128,6 +130,45 @@ jobs:
           retention-days: 14
       - name: Build
         run: npm run build
+
+  e2e:
+    name: E2E (fluxo principal, acessibilidade e 360px)
+    needs: [detect, frontend]
+    if: needs.detect.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      # O front é Vite (SPA); a API é simulada no próprio E2E com page.route
+      - name: Build e preview do frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npx vite preview --port 4173 --strictPort &
+          npx --yes wait-on@8.0.3 --timeout 60000 http://localhost:4173/entrar
+      - name: Instalar Playwright
+        working-directory: e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Rodar E2E (celular 360px e desktop)
+        working-directory: e2e
+        env:
+          BASE_URL: http://localhost:4173
+        run: npx playwright test
+      - name: Publicar relatório do E2E
+        if: always() && hashFiles('e2e/playwright-report/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-e2e
+          path: e2e/playwright-report
+          retention-days: 14
 
   docker:
     name: Build das imagens Docker
@@ -161,7 +202,7 @@ jobs:
   # Check único para a regra de proteção da main: fica vermelho se qualquer job falhar.
   ci-ok:
     name: CI ok
-    needs: [detect, backend, frontend, docker]
+    needs: [detect, backend, frontend, e2e, docker]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2

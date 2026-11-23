@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vero - Preview: Anotar Gasto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+  <nav class="preview-nav-bar">
+    <strong>Preview de Telas:</strong>
+    <div class="preview-nav-links">
+      <a href="1-inicio.html">1. Tela Inicial</a>
+      <a href="2-anotar-gasto.html" class="active">2. Anotar Gasto</a>
+      <a href="3-cadastro-passo1.html">3. Cadastro</a>
+      <a href="4-cadastro-passo2.html">4. Código SMS</a>
+      <a href="5-cadastro-pin.html">5. Criar PIN</a>
+      <a href="6-entrar.html">6. Login</a>
+      <a href="7-confirmacao.html">7. Confirmação</a>
+      <a href="index.html">Ver Todas</a>
+    </div>
+  </nav>
+
+  <div class="page-container">
+    <header class="navbar">
+      <a href="1-inicio.html" class="brand-logo">
+        <svg class="icon" viewBox="0 0 36 36" style="width:34px; height:34px; stroke-width:5; stroke:var(--violeta-vero);"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
+        <span>Vero</span>
+      </a>
+      <a href="1-inicio.html" class="btn-secondary" style="width:auto; min-height:44px; padding:8px 16px; border-radius:12px; text-decoration:none;">Cancelar</a>
+    </header>
+
+    <div class="card-formulario vero-card">
+      <h1 class="titulo-tela">Anotar novo gasto</h1>
+      <p class="subtitulo-tela">Digite o valor no teclado abaixo:</p>
+
+      <!-- Display Monetário -->
+      <div id="display-valor" class="display-monetario">
+        R$ 12,50
+      </div>
+
+      <!-- Teclado Numérico 64px Anti-Vazamento -->
+      <div class="keypad-grid">
+        <button type="button" class="key-btn" onclick="digitar('1')">1</button>
+        <button type="button" class="key-btn" onclick="digitar('2')">2</button>
+        <button type="button" class="key-btn" onclick="digitar('3')">3</button>
+        <button type="button" class="key-btn" onclick="digitar('4')">4</button>
+        <button type="button" class="key-btn" onclick="digitar('5')">5</button>
+        <button type="button" class="key-btn" onclick="digitar('6')">6</button>
+        <button type="button" class="key-btn" onclick="digitar('7')">7</button>
+        <button type="button" class="key-btn" onclick="digitar('8')">8</button>
+        <button type="button" class="key-btn" onclick="digitar('9')">9</button>
+        <button type="button" class="key-btn action" onclick="limpar()">Limpar</button>
+        <button type="button" class="key-btn" onclick="digitar('0')">0</button>
+        <button type="button" class="key-btn action" onclick="apagar()" aria-label="Apagar dígito">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+        </button>
+      </div>
+
+      <h2 style="font-size:18px; font-weight:700; margin-bottom:10px;">Escolha a categoria:</h2>
+      <!-- Categorias com Ícones SVG -->
+      <div class="cat-grid">
+        <button type="button" class="cat-item active" onclick="selecionarCat(this)">
+          <svg class="icon" viewBox="0 0 24 24" style="width:26px; height:26px;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span>Mercado</span>
+        </button>
+        <button type="button" class="cat-item" onclick="selecionarCat(this)">
+          <svg class="icon" viewBox="0 0 24 24" style="width:26px; height:26px;"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+          <span>Farmácia</span>
+        </button>
+        <button type="button" class="cat-item" onclick="selecionarCat(this)">
+          <svg class="icon" viewBox="0 0 24 24" style="width:26px; height:26px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Contas</span>
+        </button>
+        <button type="button" class="cat-item" onclick="selecionarCat(this)">
+          <svg class="icon" viewBox="0 0 24 24" style="width:26px; height:26px;"><rect x="3" y="3" width="18" height="14" rx="3"/><path d="M3 10h18"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
+          <span>Transporte</span>
+        </button>
+        <button type="button" class="cat-item" onclick="selecionarCat(this)">
+          <svg class="icon" viewBox="0 0 24 24" style="width:26px; height:26px;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span>Casa</span>
+        </button>
+        <button type="button" class="cat-item" onclick="selecionarCat(this)">
+          <svg class="icon" viewBox="0 0 24 24" style="width:26px; height:26px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>Outros</span>
+        </button>
+      </div>
+
+      <a href="7-confirmacao.html" class="btn btn-primary">Salvar gasto</a>
+    </div>
+  </div>
+
+  <script>
+    let valorStr = "1250";
+    function atualizar() {
+      const centavos = valorStr ? parseInt(valorStr, 10) : 0;
+      document.getElementById('display-valor').innerText = (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+    function digitar(d) {
+      if (valorStr.length < 8) { valorStr += d; atualizar(); }
+    }
+    function apagar() {
+      valorStr = valorStr.slice(0, -1); atualizar();
+    }
+    function limpar() {
+      valorStr = ""; atualizar();
+    }
+    function selecionarCat(el) {
+      document.querySelectorAll('.cat-item').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+    }
+  </script>
+</body>
+</html>

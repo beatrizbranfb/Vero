@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vero - Preview: Código SMS (Passo 2)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+  <nav class="preview-nav-bar">
+    <strong>Preview de Telas:</strong>
+    <div class="preview-nav-links">
+      <a href="1-inicio.html">1. Tela Inicial</a>
+      <a href="2-anotar-gasto.html">2. Anotar Gasto</a>
+      <a href="3-cadastro-passo1.html">3. Cadastro</a>
+      <a href="4-cadastro-passo2.html" class="active">4. Código SMS</a>
+      <a href="5-cadastro-pin.html">5. Criar PIN</a>
+      <a href="6-entrar.html">6. Login</a>
+      <a href="7-confirmacao.html">7. Confirmação</a>
+      <a href="index.html">Ver Todas</a>
+    </div>
+  </nav>
+
+  <div class="page-container">
+    <header class="navbar">
+      <a href="1-inicio.html" class="brand-logo">
+        <svg class="icon" viewBox="0 0 36 36" style="width:34px; height:34px; stroke-width:5; stroke:var(--violeta-vero);"><path d="M6 18.5L14.5 27L30 9.5"/></svg>
+        <span>Vero</span>
+      </a>
+      <a href="3-cadastro-passo1.html" class="btn-secondary" style="width:auto; min-height:44px; padding:8px 16px; border-radius:12px; text-decoration:none;">Voltar</a>
+    </header>
+
+    <div class="card-formulario vero-card">
+      <span style="font-weight:700; color:var(--ardosia);">Passo 2 de 3</span>
+      <h1 class="titulo-tela" style="margin-top:4px;">Código de confirmação</h1>
+      <p class="subtitulo-tela">Digite o código de 6 números enviado por SMS para seu celular:</p>
+
+      <div class="campo-grupo">
+        <input type="text" class="campo-input" value="000000" style="text-align:center; letter-spacing:8px; font-size:32px; font-weight:800; border-color:var(--violeta-vero);" />
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px;">
+        <a href="5-cadastro-pin.html" class="btn btn-primary">Confirmar código</a>
+        <a href="3-cadastro-passo1.html" class="btn btn-secondary">Corrigir número de celular</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

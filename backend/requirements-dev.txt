@@ -1,0 +1,5 @@
+ruff
+pytest
+pytest-cov
+httpx
+fakeredis

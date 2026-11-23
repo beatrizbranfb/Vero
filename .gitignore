@@ -14,13 +14,21 @@ venv/
 coverage.xml
 htmlcov/
 
-# Node / Next.js
+# Node / Frontend (Vite & Next.js)
 node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
 .next/
 out/
 coverage/
+
+# E2E 
+e2e/test-results/
+e2e/playwright-report/
 
 # Sistema e editores
 .DS_Store
 .vscode/
 .idea/
+>>>>>>> feature/autenticação
