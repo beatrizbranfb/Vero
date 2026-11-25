@@ -3,15 +3,18 @@
 import uuid
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import Mock
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.modulos.contas import servico as servico_contas
 from app.modulos.contas.esquemas import hoje_brasilia
 from app.modulos.contas.modelos import Conta
 from app.modulos.contas.saldo import ESTRATEGIA_SALDO, SaldoInalterado
 from app.modulos.identidade.modelos import Usuario
 from app.modulos.identidade.seguranca import gerar_hash
+from app.nucleo import eventos
 
 
 def _cadastrar_conta(
@@ -73,6 +76,25 @@ def test_marcar_conta_como_paga_retorna_status_e_data(
     assert corpo["vencimento_em"] == conta["vencimento_em"]
     assert corpo["descricao"] == "Conta de luz"
     assert corpo["categoria_id"] is None
+
+
+def test_pagamento_publica_evento_para_atualizar_o_app(
+    cliente_logado: TestClient, usuario: Usuario, monkeypatch
+) -> None:
+    conta = _cadastrar_conta(cliente_logado, descricao="Conta de luz")
+    publicar = Mock()
+    monkeypatch.setattr(servico_contas.eventos, "publicar", publicar)
+
+    resposta = _pagar(cliente_logado, conta["id"])
+
+    assert resposta.status_code == 200
+    publicar.assert_called_once()
+    usuario_publicado, tipo_evento, dados = publicar.call_args.args
+    assert usuario_publicado == usuario.id
+    assert tipo_evento == eventos.TipoEvento.CONTA_ATUALIZADA
+    assert dados["id"] == conta["id"]
+    assert dados["status"] == "paga"
+    assert dados["pagamento_em"] == resposta.json()["pagamento_em"]
 
 
 def test_marcar_paga_duas_vezes_e_idempotente(cliente_logado: TestClient) -> None:

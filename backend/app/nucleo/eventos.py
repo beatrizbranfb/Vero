@@ -1,7 +1,8 @@
 """Barramento de eventos pelo Valkey (D12).
 
 Cada usuário tem um canal próprio. O módulo que muda algo de interesse do app
-publica no canal; o WebSocket /ws repassa ao app do usuário (RF17).
+publica no canal; o WebSocket /ws repassa ao app do usuário (RF17), como uma
+transação criada ou uma conta atualizada.
 """
 
 import asyncio
@@ -26,6 +27,7 @@ class TipoEvento(StrEnum):
 
     CONECTADO = "conectado"
     TRANSACAO_CRIADA = "transacao_criada"
+    CONTA_ATUALIZADA = "conta_atualizada"
 
 
 def canal_do_usuario(usuario_id: uuid.UUID) -> str:

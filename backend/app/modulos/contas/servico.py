@@ -12,11 +12,13 @@ from app.modulos.contas.esquemas import (
     ContaAutomaticaVencida,
     ContaAVencer,
     ContaCadastroEntrada,
+    ContaSaida,
 )
 from app.modulos.contas.modelos import Categoria, Conta
 from app.modulos.contas.parcelas import datas_das_parcelas, dividir_valor
 from app.modulos.contas.recorrencia import gerar_proxima_recorrencia
 from app.modulos.contas.saldo import ESTRATEGIA_SALDO
+from app.nucleo import eventos
 
 
 class CategoriaInexistente(Exception):
@@ -151,6 +153,11 @@ def definir_pagamento(
 
     sessao.commit()
     sessao.refresh(conta)
+    eventos.publicar(
+        usuario_id,
+        eventos.TipoEvento.CONTA_ATUALIZADA,
+        ContaSaida.model_validate(conta).model_dump(mode="json"),
+    )
     return conta
 
 
@@ -212,6 +219,20 @@ def contas_em_aberto_entre(
         .order_by(Conta.vencimento_em, Conta.criado_em)
     )
     return [ContaAVencer.model_validate(conta) for conta in sessao.scalars(comando)]
+
+
+def contas_por_ids(
+    sessao: Session, usuario_id: uuid.UUID, contas_ids: list[uuid.UUID]
+) -> list[Conta]:
+    """Busca contas da seleção pendente, sempre limitadas ao próprio usuário."""
+    if not contas_ids:
+        return []
+    comando = (
+        select(Conta)
+        .where(Conta.usuario_id == usuario_id, Conta.id.in_(contas_ids))
+        .order_by(Conta.vencimento_em, Conta.criado_em)
+    )
+    return list(sessao.scalars(comando))
 
 
 def id_da_categoria(sessao: Session, nome: str) -> int | None:

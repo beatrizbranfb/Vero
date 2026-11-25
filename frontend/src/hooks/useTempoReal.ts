@@ -12,15 +12,26 @@ export interface EventoTransacaoCriada {
   };
 }
 
+export interface EventoContaAtualizada {
+  tipo: 'conta_atualizada';
+  dados: {
+    id: string;
+    status: 'a_vencer' | 'em_atraso' | 'paga';
+    pagamento_em: string | null;
+  };
+}
+
+type EventoTempoReal = EventoTransacaoCriada | EventoContaAtualizada;
+
 export function useTempoReal(
-  aoReceberTransacao?: (evento: EventoTransacaoCriada) => void
+  aoReceberEvento?: (evento: EventoTempoReal) => void
 ) {
   const wsRef = useRef<WebSocket | null>(null);
-  const aoReceberRef = useRef(aoReceberTransacao);
+  const aoReceberRef = useRef(aoReceberEvento);
 
   useEffect(() => {
-    aoReceberRef.current = aoReceberTransacao;
-  }, [aoReceberTransacao]);
+    aoReceberRef.current = aoReceberEvento;
+  }, [aoReceberEvento]);
 
   useEffect(() => {
     const token = obterToken();
@@ -56,7 +67,11 @@ export function useTempoReal(
         ws.onmessage = (event) => {
           try {
             const mensagem = JSON.parse(event.data);
-            if (mensagem.tipo === 'transacao_criada' && aoReceberRef.current) {
+            if (
+              (mensagem.tipo === 'transacao_criada' ||
+                mensagem.tipo === 'conta_atualizada') &&
+              aoReceberRef.current
+            ) {
               aoReceberRef.current(mensagem);
             }
           } catch {

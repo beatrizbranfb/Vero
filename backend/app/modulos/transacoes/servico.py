@@ -18,6 +18,7 @@ from app.modulos.contas import servico as servico_contas
 from app.modulos.contas.esquemas import ContaAutomaticaVencida
 from app.modulos.contas.modelos import Categoria, Conta
 from app.modulos.transacoes.esquemas import (
+    CanalAviso,
     OrigemTransacao,
     SaldoMesSaida,
     TipoTransacao,
@@ -25,7 +26,7 @@ from app.modulos.transacoes.esquemas import (
     TransacaoRegistroEntrada,
     TransacaoSaida,
 )
-from app.modulos.transacoes.modelos import Transacao
+from app.modulos.transacoes.modelos import Aviso, Transacao
 from app.nucleo import eventos
 
 FUSO_BRASILIA = ZoneInfo("America/Sao_Paulo")
@@ -280,3 +281,18 @@ def gastos_do_periodo(
         .order_by(soma.desc(), Categoria.nome)
     ).all()
     return total, [(nome, valor) for nome, valor in por_categoria]
+
+
+def contas_com_aviso_whatsapp(sessao: Session, usuario_id: uuid.UUID) -> list[Conta]:
+    """Contas abertas do usuário que já tiveram um aviso enviado pelo WhatsApp."""
+    avisadas = select(Aviso.conta_id).where(Aviso.canal == CanalAviso.WHATSAPP)
+    comando = (
+        select(Conta)
+        .where(
+            Conta.usuario_id == usuario_id,
+            Conta.pagamento_em.is_(None),
+            Conta.id.in_(avisadas),
+        )
+        .order_by(Conta.vencimento_em, Conta.criado_em)
+    )
+    return list(sessao.scalars(comando))

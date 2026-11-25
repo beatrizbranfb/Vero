@@ -31,6 +31,7 @@ from app.modulos.assistente.sessao import (
     sessao_assistente,
 )
 from app.modulos.contas import servico as servico_contas
+from app.modulos.contas.modelos import Conta
 from app.modulos.identidade.esquemas import normalizar_telefone
 from app.modulos.identidade.modelos import Usuario
 from app.modulos.identidade.seguranca import hash_telefone
@@ -167,6 +168,9 @@ async def processar_responder(
         await enviar_mensagem(remetente, mensagens.resposta_saldo(saldo))
         return
 
+    if await _tratar_pagamento_conta(remetente, telefone, usuario, texto):
+        return
+
     pendencia, expirou = sessao_assistente.obter_pendencia(telefone)
 
     if (
@@ -233,6 +237,141 @@ async def processar_responder(
     intencao = processar_texto_mensagem(texto)
     resposta = responder_intencao(telefone, usuario, intencao, origem)
     await enviar_mensagem(remetente, resposta)
+
+
+def _eh_comando_pagar(texto: str) -> bool:
+    return normalizar_resposta(texto) in {
+        "pago",
+        "paga",
+        "paguei",
+        "ja paguei",
+        "pago sim",
+    }
+
+
+def _descricao_opcao_conta(conta: Conta) -> str:
+    nome = conta.descricao or "Conta sem descrição"
+    return f"{nome} — vence em {conta.vencimento_em:%d/%m}, {mensagens.formatar_moeda(round(conta.valor * 100))}"
+
+
+def _indice_conta_escolhida(texto: str, contas: list[Conta]) -> int | None:
+    normalizado = normalizar_resposta(texto)
+    if normalizado.isdigit():
+        indice = int(normalizado) - 1
+        return indice if 0 <= indice < len(contas) else None
+
+    termos_genericos = {"conta", "descricao", "sem descricao"}
+    correspondencias = [
+        indice
+        for indice, conta in enumerate(contas)
+        if (descricao := normalizar_resposta(conta.descricao or "conta sem descricao"))
+        in normalizado
+        or (
+            len(normalizado) >= 3
+            and normalizado not in termos_genericos
+            and normalizado in descricao
+        )
+    ]
+    return correspondencias[0] if len(correspondencias) == 1 else None
+
+
+async def _tratar_pagamento_conta(
+    remetente: str, telefone: str, usuario: Usuario, texto: str
+) -> bool:
+    ids_pendentes, _ = sessao_assistente.obter_pagamento_pendente(telefone)
+    if ids_pendentes is not None:
+        if quer_cancelar(texto):
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(remetente, mensagens.escolha_conta_cancelada())
+            return True
+
+        try:
+            contas_ids = [uuid.UUID(conta_id) for conta_id in ids_pendentes]
+        except (TypeError, ValueError):
+            logger.warning("Escolha de conta inválida na sessão do assistente.")
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+            return True
+
+        with SessaoLocal() as sessao_db:
+            contas_encontradas = servico_contas.contas_por_ids(
+                sessao_db, usuario.id, contas_ids
+            )
+        por_id = {str(conta.id): conta for conta in contas_encontradas}
+        contas = [por_id[conta_id] for conta_id in ids_pendentes if conta_id in por_id]
+        if not contas:
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+            return True
+
+        indice = _indice_conta_escolhida(texto, contas)
+        if indice is None:
+            await enviar_mensagem(
+                remetente,
+                mensagens.pedir_escolha_conta(
+                    [_descricao_opcao_conta(conta) for conta in contas]
+                ),
+            )
+            return True
+
+        conta = contas[indice]
+        if conta.pagamento_em is not None:
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(
+                remetente, mensagens.conta_ja_marcada_paga(conta.descricao)
+            )
+            return True
+
+        with SessaoLocal() as sessao_db:
+            try:
+                servico_contas.definir_pagamento(
+                    sessao_db, usuario.id, conta.id, paga=True
+                )
+            except servico_contas.ContaNaoEncontrada:
+                sessao_assistente.limpar_pagamento_pendente(telefone)
+                await enviar_mensagem(
+                    remetente, mensagens.nenhuma_conta_para_pagar()
+                )
+                return True
+        sessao_assistente.limpar_pagamento_pendente(telefone)
+        await enviar_mensagem(remetente, mensagens.conta_marcada_paga(conta.descricao))
+        return True
+
+    if not _eh_comando_pagar(texto):
+        return False
+
+    with SessaoLocal() as sessao_db:
+        contas = servico_transacoes.contas_com_aviso_whatsapp(
+            sessao_db, usuario.id
+        )
+        if not contas:
+            await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+            return True
+        if len(contas) == 1:
+            try:
+                conta = servico_contas.definir_pagamento(
+                    sessao_db, usuario.id, contas[0].id, paga=True
+                )
+            except servico_contas.ContaNaoEncontrada:
+                await enviar_mensagem(
+                    remetente, mensagens.nenhuma_conta_para_pagar()
+                )
+                return True
+            await enviar_mensagem(
+                remetente, mensagens.conta_marcada_paga(conta.descricao)
+            )
+            return True
+
+    sessao_assistente.salvar_pagamento_pendente(
+        telefone, [str(conta.id) for conta in contas]
+    )
+    await enviar_mensagem(
+        remetente,
+        mensagens.pedir_escolha_conta(
+            [_descricao_opcao_conta(conta) for conta in contas]
+        ),
+    )
+    return True
 
 
 def responder_intencao(
