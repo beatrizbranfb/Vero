@@ -206,3 +206,44 @@ def test_escolha_por_nome_e_cancelamento(  # noqa: F811
     assert enviadas[-1] == mensagens.conta_marcada_paga("Internet")
     assert internet.pagamento_em is not None
     assert router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None
+
+
+def test_lancamento_durante_escolha_de_conta_segue_fluxo_normal(  # noqa: F811
+    ambiente_assistente,  # noqa: F811
+    monkeypatch,
+):
+    sessao_assistente, _, _, _, _ = ambiente_assistente
+    luz = ContaTeste(uuid.uuid4(), "Luz")
+    internet = ContaTeste(uuid.uuid4(), "Internet")
+    telefone, enviadas, _, enviar, marcar_paga = _preparar(
+        ambiente_assistente, monkeypatch, luz, internet
+    )
+
+    enviar("pago")
+    assert "Qual você pagou?" in enviadas[-1]
+
+    enviar("gastei 30 no mercado")
+
+    assert "Qual você pagou?" not in enviadas[-1]
+    assert router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None
+    pendencia, _ = sessao_assistente.obter_pendencia(telefone)
+    assert pendencia is not None
+    assert pendencia.valor == 3000
+    marcar_paga.assert_not_called()
+
+
+def test_numero_fora_da_lista_pergunta_de_novo(  # noqa: F811
+    ambiente_assistente,  # noqa: F811
+    monkeypatch,
+):
+    luz = ContaTeste(uuid.uuid4(), "Luz")
+    internet = ContaTeste(uuid.uuid4(), "Internet")
+    _, enviadas, _, enviar, marcar_paga = _preparar(
+        ambiente_assistente, monkeypatch, luz, internet
+    )
+
+    enviar("pago")
+    enviar("5")
+
+    assert "Qual você pagou?" in enviadas[-1]
+    marcar_paga.assert_not_called()

@@ -249,6 +249,14 @@ def _eh_comando_pagar(texto: str) -> bool:
     }
 
 
+def _eh_lancamento(texto: str) -> bool:
+    """Mensagem com valor que não é só o número de uma opção da lista."""
+    if normalizar_resposta(texto).isdigit():
+        return False
+    valor, _ = extrair_valor(texto)
+    return valor is not None
+
+
 def _descricao_opcao_conta(conta: Conta) -> str:
     nome = conta.descricao or "Conta sem descrição"
     return f"{nome} — vence em {conta.vencimento_em:%d/%m}, {mensagens.formatar_moeda(round(conta.valor * 100))}"
@@ -305,6 +313,10 @@ async def _tratar_pagamento_conta(
             return True
 
         indice = _indice_conta_escolhida(texto, contas)
+        if indice is None and _eh_lancamento(texto):
+            # A pessoa mudou de assunto ("gastei 30 no mercado"): segue o fluxo normal
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            return False
         if indice is None:
             await enviar_mensagem(
                 remetente,
