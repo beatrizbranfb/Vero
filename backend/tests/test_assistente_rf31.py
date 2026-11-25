@@ -126,9 +126,9 @@ def test_pagar_com_varias_contas_pergunta_qual_e_processa_escolha(
     assert "Qual você pagou?" in enviadas[-1]
     assert "1. Luz" in enviadas[-1]
     assert "2. Internet" in enviadas[-1]
-    ids_pendentes = router_module.sessao_assistente.obter_pagamento_pendente(
-        telefone
-    )[0]
+    ids_pendentes = router_module.sessao_assistente.obter_pagamento_pendente(telefone)[
+        0
+    ]
     assert ids_pendentes is not None
     assert len(ids_pendentes) == 2
 
@@ -137,9 +137,7 @@ def test_pagar_com_varias_contas_pergunta_qual_e_processa_escolha(
     assert luz.pagamento_em is None
     assert internet.pagamento_em is not None
     assert enviadas[-1] == mensagens.conta_marcada_paga("Internet")
-    assert (
-        router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None
-    )
+    assert router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None
     assert marcar_paga.call_args.args[2] == internet.id
 
 
@@ -190,9 +188,7 @@ def test_escolha_por_nome_e_cancelamento(  # noqa: F811
     enviar("pago")
     enviar("cancelar")
     assert enviadas[-1] == mensagens.escolha_conta_cancelada()
-    assert (
-        router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None
-    )
+    assert router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None
 
     enviar("pago")
     assert "Qual você pagou?" in enviadas[-1]
@@ -209,6 +205,4 @@ def test_escolha_por_nome_e_cancelamento(  # noqa: F811
     enviar("pago")
     assert enviadas[-1] == mensagens.conta_marcada_paga("Internet")
     assert internet.pagamento_em is not None
-    assert (
-        router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None
-    )
+    assert router_module.sessao_assistente.obter_pagamento_pendente(telefone)[0] is None

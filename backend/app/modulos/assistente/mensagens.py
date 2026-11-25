@@ -15,7 +15,9 @@ def resposta_saldo(saldo: Decimal) -> str:
 
 def pedir_escolha_conta(opcoes: list[str]) -> str:
     linhas = ["Encontrei mais de uma conta com aviso. Qual você pagou?"]
-    linhas.extend(f"{numero}. {descricao}" for numero, descricao in enumerate(opcoes, 1))
+    linhas.extend(
+        f"{numero}. {descricao}" for numero, descricao in enumerate(opcoes, 1)
+    )
     linhas.append("Responda com o número ou o nome da conta.")
     return "\n".join(linhas)
 

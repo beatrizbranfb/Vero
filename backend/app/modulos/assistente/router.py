@@ -329,9 +329,7 @@ async def _tratar_pagamento_conta(
                 )
             except servico_contas.ContaNaoEncontrada:
                 sessao_assistente.limpar_pagamento_pendente(telefone)
-                await enviar_mensagem(
-                    remetente, mensagens.nenhuma_conta_para_pagar()
-                )
+                await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
                 return True
         sessao_assistente.limpar_pagamento_pendente(telefone)
         await enviar_mensagem(remetente, mensagens.conta_marcada_paga(conta.descricao))
@@ -341,9 +339,7 @@ async def _tratar_pagamento_conta(
         return False
 
     with SessaoLocal() as sessao_db:
-        contas = servico_transacoes.contas_com_aviso_whatsapp(
-            sessao_db, usuario.id
-        )
+        contas = servico_transacoes.contas_com_aviso_whatsapp(sessao_db, usuario.id)
         if not contas:
             await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
             return True
@@ -353,9 +349,7 @@ async def _tratar_pagamento_conta(
                     sessao_db, usuario.id, contas[0].id, paga=True
                 )
             except servico_contas.ContaNaoEncontrada:
-                await enviar_mensagem(
-                    remetente, mensagens.nenhuma_conta_para_pagar()
-                )
+                await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
                 return True
             await enviar_mensagem(
                 remetente, mensagens.conta_marcada_paga(conta.descricao)

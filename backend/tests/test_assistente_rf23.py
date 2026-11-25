@@ -33,9 +33,9 @@ def test_pergunta_saldo_retorna_disponivel_do_mes(
 
     enviar(pergunta)
 
-    mes_atual = datetime.now(
-        router_module.servico_transacoes.FUSO_BRASILIA
-    ).strftime("%Y-%m")
+    mes_atual = datetime.now(router_module.servico_transacoes.FUSO_BRASILIA).strftime(
+        "%Y-%m"
+    )
     resumir_mes.assert_called_once()
     assert resumir_mes.call_args.args[1:] == ("usuario-teste", mes_atual)
     assert enviadas == [mensagens.resposta_saldo(Decimal("1234.56"))]

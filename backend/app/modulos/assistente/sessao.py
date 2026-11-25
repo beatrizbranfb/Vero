@@ -88,9 +88,7 @@ class GerenciadorSessao:
                 )
         self._pagamentos_memoria[telefone] = (contas_ids, criado)
 
-    def obter_pagamento_pendente(
-        self, telefone: str
-    ) -> tuple[list[str] | None, bool]:
+    def obter_pagamento_pendente(self, telefone: str) -> tuple[list[str] | None, bool]:
         agora = datetime.now(UTC)
         if self._valkey:
             try:
