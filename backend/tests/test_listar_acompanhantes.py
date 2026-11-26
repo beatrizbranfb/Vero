@@ -13,11 +13,12 @@ URL = "/api/v1/auth/contas-com-acompanhantes"
 
 
 def _criar_usuario(sessao: Session, nome: str) -> Usuario:
-    telefone = "55619" + uuid.uuid4().hex[:8]
+    telefone = "55619" + str(uuid.uuid4().int)[:8]
     u = Usuario(
         id=uuid.uuid4(),
         nome=nome,
         hash_telefone=hash_telefone(telefone),
+        telefone=telefone,
         email=f"{uuid.uuid4().hex[:8]}@vero.com",
         hash_pin=gerar_hash("123456"),
         tentativas=0,
@@ -123,7 +124,7 @@ def test_convidar_cria_convite_pendente(
 
     resposta = cliente_logado.post(
         "/api/v1/auth/convidar-acompanhante",
-        params={"id_usuario_acompanhante": str(acompanhante.id)},
+        json={"telefone": acompanhante.telefone},
     )
 
     assert resposta.status_code == 201
@@ -135,24 +136,22 @@ def test_convidar_cria_convite_pendente(
 
 def test_convidar_de_novo_retorna_409(sessao: Session, cliente_logado: TestClient):
     acompanhante = _criar_usuario(sessao, "Ana")
-    params = {"id_usuario_acompanhante": str(acompanhante.id)}
+    corpo = {"telefone": acompanhante.telefone}
 
-    cliente_logado.post("/api/v1/auth/convidar-acompanhante", params=params)
-    resposta = cliente_logado.post("/api/v1/auth/convidar-acompanhante", params=params)
+    cliente_logado.post("/api/v1/auth/convidar-acompanhante", json=corpo)
+    resposta = cliente_logado.post("/api/v1/auth/convidar-acompanhante", json=corpo)
 
     assert resposta.status_code == 409
 
 
 def test_convidar_usuario_inexistente_ou_a_si_mesmo(
-    cliente_logado: TestClient, usuario: Usuario
+    sessao: Session, cliente: TestClient
 ):
+    titular = _criar_usuario(sessao, "Maria")
+    _logar_como(cliente, titular)
     url = "/api/v1/auth/convidar-acompanhante"
-    inexistente = cliente_logado.post(
-        url, params={"id_usuario_acompanhante": str(uuid.uuid4())}
-    )
-    si_mesmo = cliente_logado.post(
-        url, params={"id_usuario_acompanhante": str(usuario.id)}
-    )
+    inexistente = cliente.post(url, json={"telefone": "61900000000"})
+    si_mesmo = cliente.post(url, json={"telefone": titular.telefone})
 
     assert inexistente.status_code == 404
     assert si_mesmo.status_code == 422
@@ -178,7 +177,7 @@ def test_fluxo_aceitar_e_revogar(
     # Depois de revogado dá para convidar de novo
     reconvite = cliente.post(
         "/api/v1/auth/convidar-acompanhante",
-        params={"id_usuario_acompanhante": str(acompanhante.id)},
+        json={"telefone": acompanhante.telefone},
     )
     assert reconvite.status_code == 201
 
