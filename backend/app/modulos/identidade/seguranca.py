@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
@@ -12,7 +13,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.modulos.identidade.mensagens import Message
-from app.modulos.identidade.modelos import Usuario
+from app.modulos.identidade.modelos import Acompanhante, Usuario
 from app.nucleo.banco import obter_sessao
 from app.nucleo.config import settings
 
@@ -40,17 +41,23 @@ HASH_FICTICIO = gerar_hash("vero-hash-ficticio")
 
 
 def criar_token(
-    id_usuario: uuid.UUID, metodo: str, duracao: timedelta, versao: int = 0
+    id_usuario: uuid.UUID,
+    metodo: str,
+    duracao: timedelta,
+    versao: int = 0,
+    id_titular: uuid.UUID | None = None,
 ) -> str:
     agora = datetime.now(UTC)
     dados = {
         "sub": str(id_usuario),
-        "perfil": "titular",
+        "perfil": "titular" if id_titular is None else "acompanhante",
         "metodo": metodo,
         "ver": versao,
         "iat": agora,
         "exp": agora + duracao,
     }
+    if id_titular is not None:
+        dados["tit"] = str(id_titular)
     return jwt.encode(dados, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITMO)
 
 
@@ -63,11 +70,9 @@ def ler_token(token: str) -> dict:
     )
 
 
-def usuario_atual(
-    credenciais: HTTPAuthorizationCredentials | None = Depends(esquema_bearer),
-    sessao: Session = Depends(obter_sessao),
-) -> Usuario:
-    """Dependência das rotas que exigem login."""
+def _ler_sessao(
+    credenciais: HTTPAuthorizationCredentials | None, sessao: Session
+) -> tuple[dict, Usuario]:
     nao_autorizado = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=Message.SESSAO_INVALIDA.message,
@@ -84,7 +89,45 @@ def usuario_atual(
     usuario = sessao.get(Usuario, id_usuario)
     if usuario is None or not token_na_versao_atual(dados, usuario):
         raise nao_autorizado
+    return dados, usuario
+
+
+def usuario_atual(
+    credenciais: HTTPAuthorizationCredentials | None = Depends(esquema_bearer),
+    sessao: Session = Depends(obter_sessao),
+) -> Usuario:
+    """Dependência das rotas que exigem login."""
+    dados, usuario = _ler_sessao(credenciais, sessao)
+    if dados.get("perfil", "titular") != "titular":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, Message.SO_TITULAR.message)
     return usuario
+
+
+@dataclass(frozen=True)
+class Acesso:
+    titular: Usuario
+    autor: Usuario
+
+
+def acesso_aos_dados(
+    credenciais: HTTPAuthorizationCredentials | None = Depends(esquema_bearer),
+    sessao: Session = Depends(obter_sessao),
+) -> Acesso:
+    dados, usuario = _ler_sessao(credenciais, sessao)
+    if dados.get("perfil", "titular") == "titular":
+        return Acesso(titular=usuario, autor=usuario)
+
+    sem_acesso = HTTPException(
+        status.HTTP_403_FORBIDDEN, Message.ACESSO_REVOGADO.message
+    )
+    try:
+        id_titular = uuid.UUID(dados["tit"])
+    except (KeyError, ValueError):
+        raise sem_acesso from None
+    vinculo = sessao.get(Acompanhante, (id_titular, usuario.id))
+    if vinculo is None or vinculo.status != "autorizado":
+        raise sem_acesso
+    return Acesso(titular=sessao.get(Usuario, id_titular), autor=usuario)
 
 
 def token_na_versao_atual(dados: dict, usuario: Usuario) -> bool:

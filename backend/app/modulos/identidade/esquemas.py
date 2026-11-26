@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, StringConstraints
@@ -86,3 +87,14 @@ class TokenSaida(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expira_em: int
+
+
+class ConviteEntrada(BaseModel):
+    telefone: Telefone
+
+
+class ConviteRecebidoSaida(BaseModel):
+    id_titular: uuid.UUID
+    nome_titular: str
+    status: str
+    data_convite: datetime

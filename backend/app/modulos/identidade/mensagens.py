@@ -15,6 +15,15 @@ class Message(Enum):
         "Muitas tentativas erradas. Espere {segundos} segundos e tente de novo."
     )
     SESSAO_INVALIDA = "Sua sessão terminou. Entre de novo na sua conta."
+    SO_TITULAR = "Só a dona ou o dono da conta pode fazer isso."
+    ACESSO_REVOGADO = "Você não tem mais acesso a esta conta."
+    CONVIDAR_A_SI_MESMO = "Você não pode convidar o seu próprio celular."
+    CONVIDADO_SEM_CONTA = (
+        "Esse celular ainda não tem conta no Vero. "
+        "Peça para a pessoa se cadastrar e depois envie o convite."
+    )
+    CONVITE_JA_EXISTE = "Você já convidou essa pessoa."
+    CONVITE_NAO_ENCONTRADO = "Convite não encontrado."
     CODIGO_FORMATO = "O código tem 6 números."
     CODIGO_ENVIADO = (
         "Se houver uma conta com este celular, enviamos um código para o e-mail "
