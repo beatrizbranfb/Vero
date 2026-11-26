@@ -98,3 +98,31 @@ class ConviteRecebidoSaida(BaseModel):
     nome_titular: str
     status: str
     data_convite: datetime
+
+
+class DesafioWebauthSaida(BaseModel):
+    desafio: str
+
+
+class EntradaRegistroWebauthn(BaseModel):
+    usuario_telefone: Telefone
+
+
+class SaidaRegistroWebsauthn(BaseModel):
+    desafio: str
+
+
+class EntradaFinalizarRegistroWebauthn(BaseModel):
+    id_usuario_acompanhante: uuid.UUID
+    credential_public_key: str
+    credential_id: str
+    quantidade: int
+
+
+class EntradaLoginWebauthn(BaseModel):
+    usuario_telefone: Telefone
+
+
+class SaidaLoginWebauthn(BaseModel):
+    sucesso: bool = True
+    mensagem: str = "Biometria liberada."
