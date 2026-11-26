@@ -85,6 +85,14 @@ Legenda: ✅ passou · ❌ falhou (issue aberta) · ⚠️ passou em parte · �
 | Conta nova, sem gasto nenhum | ❌ 🔧 | "Você já gastou 100% / todo o saldo" (#140, PR #150) |
 | Linguagem: "PIN" | ➖ | Decisão do time em `docs/linguagem.md`. A persona não conhece a palavra; observar no teste com pessoa real |
 
+## RNF05 · Dados biométricos (LGPD)
+
+| # | Critério | Status | Issue / observação |
+|---|---|---|---|
+| 1 | Com WebAuthn, o servidor guarda só a chave pública | ✅ | Implementado na US31: campo `credencial_webauthn` armazena apenas a chave pública do passkey, nunca a digital ou rosto. Documentado na auditoria LGPD. |
+| 2 | Dados biométricos nunca são transmitidos em texto claro | ✅ | O fluxo WebAuthn usa desafios assinados e credenciais bound ao dispositivo; os dados biométricos permanecem no dispositivo do usuário. |
+| 3 | Política de privacidade atualizada com o novo tratamento de dados | ⏳ | Pendente: atualizar a política de privacidade do Vero para mencionar o armazenamento de chaves públicas para autenticação biométrica. |
+
 ## Assistente: frases do jeito da persona
 
 | Frase | Antes | Depois (PRs abertos) |
