@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.modulos.identidade.modelos import Usuario
-from app.modulos.identidade.seguranca import usuario_atual
+from app.modulos.identidade.seguranca import Acesso, acesso_aos_dados, usuario_atual
 from app.modulos.transacoes import servico
 from app.modulos.transacoes.esquemas import (
     SaldoMesSaida,
@@ -26,11 +26,11 @@ router = APIRouter(prefix="/api/v1/transacoes", tags=["transacoes"])
 @router.post("", response_model=TransacaoSaida, status_code=status.HTTP_201_CREATED)
 def registrar(
     dados: TransacaoRegistroEntrada,
-    usuario: Usuario = Depends(usuario_atual),
+    acesso: Acesso = Depends(acesso_aos_dados),
     sessao: Session = Depends(obter_sessao),
 ) -> Transacao:
     try:
-        return servico.registrar(sessao, usuario.id, dados)
+        return servico.registrar(sessao, acesso.titular.id, dados, acesso.autor.id)
     except servico.ReferenciaInexistente:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -40,10 +40,10 @@ def registrar(
 
 @router.get("", response_model=list[TransacaoSaida])
 def listar(
-    usuario: Usuario = Depends(usuario_atual),
+    acesso: Acesso = Depends(acesso_aos_dados),
     sessao: Session = Depends(obter_sessao),
 ) -> list[Transacao]:
-    return servico.listar(sessao, usuario.id)
+    return servico.listar(sessao, acesso.titular.id)
 
 
 @router.get("/saldo", response_model=SaldoMesSaida)
@@ -52,7 +52,7 @@ def obter_saldo_mes(
         default=None,
         pattern=r"^\d{4}-(0[1-9]|1[0-2])$",
     ),
-    usuario: Usuario = Depends(usuario_atual),
+    acesso: Acesso = Depends(acesso_aos_dados),
     sessao: Session = Depends(obter_sessao),
 ) -> SaldoMesSaida:
     if mes is None:
@@ -65,18 +65,20 @@ def obter_saldo_mes(
             "Mês inválido.",
         )
 
-    return servico.resumir_mes(sessao, usuario.id, mes)
+    return servico.resumir_mes(sessao, acesso.titular.id, mes)
 
 
 @router.patch("/{transacao_id}", response_model=TransacaoSaida)
 def editar(
     transacao_id: UUID,
     dados: TransacaoEdicaoEntrada,
-    usuario: Usuario = Depends(usuario_atual),
+    acesso: Acesso = Depends(acesso_aos_dados),
     sessao: Session = Depends(obter_sessao),
 ) -> Transacao:
     try:
-        return servico.editar(sessao, usuario.id, transacao_id, dados)
+        return servico.editar(
+            sessao, acesso.titular.id, transacao_id, dados, acesso.autor.id
+        )
     except servico.TransacaoNaoEncontrada:
         raise _nao_encontrada() from None
     except servico.ReferenciaInexistente:

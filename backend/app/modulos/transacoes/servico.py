@@ -27,8 +27,10 @@ from app.modulos.transacoes.esquemas import (
 )
 from app.modulos.transacoes.modelos import Transacao
 from app.nucleo import eventos
+from app.nucleo.auditoria import Acao, registrar_acao
 
 FUSO_BRASILIA = ZoneInfo("America/Sao_Paulo")
+ENTIDADE = "transacao"
 
 
 class TransacaoJaRegistrada(Exception):
@@ -44,7 +46,10 @@ class TransacaoNaoEncontrada(Exception):
 
 
 def registrar(
-    sessao: Session, usuario_id: uuid.UUID, dados: TransacaoRegistroEntrada
+    sessao: Session,
+    usuario_id: uuid.UUID,
+    dados: TransacaoRegistroEntrada,
+    autor_id: uuid.UUID | None = None,
 ) -> Transacao:
     """Salva a transação e avisa o app do usuário, que atualiza saldo, indicador de
     situação e histórico sem recarregar a página (RF17)."""
@@ -68,6 +73,15 @@ def registrar(
     )
     sessao.add(transacao)
     try:
+        sessao.flush()
+        registrar_acao(
+            sessao,
+            usuario_id,
+            autor_id or usuario_id,
+            ENTIDADE,
+            transacao.id,
+            Acao.CRIOU,
+        )
         sessao.commit()
     except IntegrityError:
         # FKs que vêm de fora: usuário e categoria
@@ -93,6 +107,7 @@ def editar(
     usuario_id: uuid.UUID,
     transacao_id: uuid.UUID,
     dados: TransacaoEdicaoEntrada,
+    autor_id: uuid.UUID | None = None,
 ) -> Transacao:
     """Muda só os campos enviados. A origem fica a mesma: o lançamento automático
     editado continua marcado como automático."""
@@ -100,6 +115,9 @@ def editar(
     for campo, valor in dados.model_dump(exclude_unset=True).items():
         setattr(transacao, campo, valor)
     transacao.atualizado_em = func.now()
+    registrar_acao(
+        sessao, usuario_id, autor_id or usuario_id, ENTIDADE, transacao.id, Acao.EDITOU
+    )
     try:
         sessao.commit()
     except IntegrityError:
@@ -110,10 +128,18 @@ def editar(
     return transacao
 
 
-def excluir(sessao: Session, usuario_id: uuid.UUID, transacao_id: uuid.UUID) -> None:
+def excluir(
+    sessao: Session,
+    usuario_id: uuid.UUID,
+    transacao_id: uuid.UUID,
+    autor_id: uuid.UUID | None = None,
+) -> None:
     """Apaga a transação. Se ela veio de um gasto fixo, a conta continua paga, então o
     lançamento automático não volta."""
     sessao.delete(_buscar(sessao, usuario_id, transacao_id))
+    registrar_acao(
+        sessao, usuario_id, autor_id or usuario_id, ENTIDADE, transacao_id, Acao.EXCLUIU
+    )
     sessao.commit()
 
 

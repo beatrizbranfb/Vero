@@ -9,6 +9,8 @@ from app.integracoes.correio import obter_email
 from app.modulos.identidade import recuperacao, servico
 from app.modulos.identidade.esquemas import (
     CadastroEntrada,
+    ConviteEntrada,
+    ConviteRecebidoSaida,
     EsqueciPinEntrada,
     EsqueciPinSaida,
     LoginPinEntrada,
@@ -19,7 +21,11 @@ from app.modulos.identidade.esquemas import (
 )
 from app.modulos.identidade.mensagens import Message
 from app.modulos.identidade.modelos import Acompanhante, Usuario
-from app.modulos.identidade.seguranca import criar_token, usuario_atual
+from app.modulos.identidade.seguranca import (
+    criar_token,
+    hash_telefone,
+    usuario_atual,
+)
 from app.modulos.identidade.servico import Attempts
 from app.nucleo.banco import obter_sessao
 from app.nucleo.portas import PortaEmail
@@ -166,9 +172,11 @@ def trocar_pin(
     return _emitir_token(usuario)
 
 
-def _emitir_token(usuario: Usuario) -> TokenSaida:
+def _emitir_token(usuario: Usuario, id_titular: uuid.UUID | None = None) -> TokenSaida:
     duracao = Attempts.DURACAO_TOKEN_PIN.value
-    token = criar_token(usuario.id, "pin", duracao, usuario.versao_token)
+    token = criar_token(
+        usuario.id, "pin", duracao, usuario.versao_token, id_titular=id_titular
+    )
     return TokenSaida(access_token=token, expira_em=int(duracao.total_seconds()))
 
 
@@ -200,7 +208,7 @@ def _buscar_convite(
     "/convidar-acompanhante", response_model=dict, status_code=status.HTTP_201_CREATED
 )
 def convidar_acompanhante(
-    id_usuario_acompanhante: uuid.UUID,
+    dados: ConviteEntrada,
     sessao: Session = Depends(obter_sessao),
     current_user: Usuario = Depends(usuario_atual),
 ) -> dict[str, str]:
@@ -208,23 +216,26 @@ def convidar_acompanhante(
 
     O familiar ou próximo recebe um convite e precisa aceitar explicitamente.
     """
-    if id_usuario_acompanhante == current_user.id:
+    convidado = sessao.scalar(
+        select(Usuario).where(Usuario.hash_telefone == hash_telefone(dados.telefone))
+    )
+    if convidado is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, Message.CONVIDADO_SEM_CONTA.message
+        )
+    if convidado.id == current_user.id:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Não é possível convidar a si mesmo.",
+            Message.CONVIDAR_A_SI_MESMO.message,
         )
-    if sessao.get(Usuario, id_usuario_acompanhante) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuário não encontrado.")
 
-    convite = _buscar_convite(sessao, current_user.id, id_usuario_acompanhante)
+    convite = _buscar_convite(sessao, current_user.id, convidado.id)
     if convite is not None and convite.status in STATUS_ATIVOS:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "Já existe um convite ativo entre estes usuários."
-        )
+        raise HTTPException(status.HTTP_409_CONFLICT, Message.CONVITE_JA_EXISTE.message)
     if convite is None:
         convite = Acompanhante(
             id_usuario_titular=current_user.id,
-            id_usuario_acompanhante=id_usuario_acompanhante,
+            id_usuario_acompanhante=convidado.id,
         )
         sessao.add(convite)
     # Convite revogado antes: reaproveita a linha (a PK é o par de usuários)
@@ -237,8 +248,45 @@ def convidar_acompanhante(
     return {
         "status": "convite_enviado",
         "convite_id": str(convite.id_usuario_acompanhante),
-        "mensagem": "Convite enviado à pessoa de confiança.",
+        "mensagem": f"Convite enviado para {convidado.nome}.",
     }
+
+
+@router.get("/convites-recebidos", response_model=list[ConviteRecebidoSaida])
+def listar_convites_recebidos(
+    sessao: Session = Depends(obter_sessao),
+    current_user: Usuario = Depends(usuario_atual),
+) -> list[ConviteRecebidoSaida]:
+    linhas = sessao.execute(
+        select(Acompanhante, Usuario.nome)
+        .join(Usuario, Acompanhante.id_usuario_titular == Usuario.id)
+        .where(
+            Acompanhante.id_usuario_acompanhante == current_user.id,
+            Acompanhante.status.in_(STATUS_ATIVOS),
+        )
+        .order_by(Acompanhante.dh_criacao.desc())
+    ).all()
+    return [
+        ConviteRecebidoSaida(
+            id_titular=convite.id_usuario_titular,
+            nome_titular=nome,
+            status=convite.status,
+            data_convite=convite.dh_criacao,
+        )
+        for convite, nome in linhas
+    ]
+
+
+@router.post("/acompanhar/{id_usuario_titular}", response_model=TokenSaida)
+def acompanhar(
+    id_usuario_titular: uuid.UUID,
+    sessao: Session = Depends(obter_sessao),
+    current_user: Usuario = Depends(usuario_atual),
+) -> TokenSaida:
+    convite = _buscar_convite(sessao, id_usuario_titular, current_user.id)
+    if convite is None or convite.status != "autorizado":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, Message.ACESSO_REVOGADO.message)
+    return _emitir_token(current_user, id_titular=id_usuario_titular)
 
 
 @router.post(
@@ -254,7 +302,9 @@ def aceitar_convite(
     """A pessoa convidada aceita explicitamente o convite do titular."""
     convite = _buscar_convite(sessao, id_usuario_titular, current_user.id)
     if convite is None or convite.status != "pendente":
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Convite não encontrado.")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, Message.CONVITE_NAO_ENCONTRADO.message
+        )
     convite.dh_aceite = datetime.now(UTC)
     convite.status = "autorizado"
     sessao.commit()
@@ -276,7 +326,9 @@ def revogar_acesso(
     """O titular revoga o acesso do acompanhante (convite_id = id do acompanhante)."""
     convite = _buscar_convite(sessao, current_user.id, convite_id)
     if convite is None or convite.status not in STATUS_ATIVOS:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Convite não encontrado.")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, Message.CONVITE_NAO_ENCONTRADO.message
+        )
     convite.status = "revogado"
     convite.dh_revogacao = datetime.now(UTC)
     sessao.commit()
