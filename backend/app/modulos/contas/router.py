@@ -17,7 +17,7 @@ from app.modulos.contas.esquemas import (
 from app.modulos.contas.mensagens import Message
 from app.modulos.contas.modelos import Categoria, Conta
 from app.modulos.identidade.modelos import Usuario
-from app.modulos.identidade.seguranca import usuario_atual
+from app.modulos.identidade.seguranca import Acesso, acesso_aos_dados, usuario_atual
 from app.nucleo.banco import obter_sessao
 
 router = APIRouter(prefix="/api/v1/contas", tags=["contas"])
@@ -59,7 +59,7 @@ def cadastrar(
 
 @categorias_router.get("", response_model=list[CategoriaSaida])
 def listar_categorias(
-    usuario: Usuario = Depends(usuario_atual),
+    acesso: Acesso = Depends(acesso_aos_dados),
     sessao: Session = Depends(obter_sessao),
 ) -> list[CategoriaSaida]:
     categorias = sessao.scalars(select(Categoria).order_by(Categoria.id))
@@ -76,10 +76,10 @@ def listar_categorias(
 
 @router.get("", response_model=list[ContaSaida])
 def listar(
-    usuario: Usuario = Depends(usuario_atual),
+    acesso: Acesso = Depends(acesso_aos_dados),
     sessao: Session = Depends(obter_sessao),
 ) -> list[Conta]:
-    return servico.listar(sessao, usuario.id)
+    return servico.listar(sessao, acesso.titular.id)
 
 
 @router.patch("/{conta_id}/pagamento", response_model=ContaSaida)
