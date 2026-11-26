@@ -12,6 +12,7 @@ class Message(Enum):
     TRANSACAO_NAO_ENCONTRADA = (
         "Não encontramos esse lançamento. Atualize o histórico e tente de novo."
     )
+    SO_QUEM_ANOTOU_APAGA = "Você só pode apagar os lançamentos que você mesmo anotou."
 
     # Lembretes de vencimento no WhatsApp (RF28, RF29)
     LEMBRETE_ASSUNTO = "Lembrete de vencimento"
