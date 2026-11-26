@@ -9,7 +9,6 @@ from enum import Enum
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from sqlalchemy.orm.attributes import get_state_history
 
 from app.modulos.identidade.esquemas import CadastroEntrada
 from app.modulos.identidade.modelos import Usuario
@@ -146,7 +145,7 @@ def salvar_credencial_webauthn(
     sessao.add(usuario)
 
 
-def existe_credencial_webauthn(usuario: Usuario, credencial_id: int) -> bool:
+def existe_credencial_webauthn(usuario: Usuario, credencial_id: str) -> bool:
     """verifica se ja existe credencial registrada com o id"""
     credencial = getattr(usuario, "credencial_webauthn", None)
     if not credencial:

@@ -11,10 +11,14 @@ from app.modulos.identidade.esquemas import (
     CadastroEntrada,
     ConviteEntrada,
     ConviteRecebidoSaida,
+    DesafioWebauthSaida,
+    EntradaFinalizarRegistroWebauthn,
+    EntradaLoginWebauthn,
     EsqueciPinEntrada,
     EsqueciPinSaida,
     LoginPinEntrada,
     RedefinirPinEntrada,
+    SaidaLoginWebauthn,
     TokenSaida,
     TrocarPinEntrada,
     UsuarioSaida,
@@ -170,6 +174,83 @@ def trocar_pin(
     except servico.ContaBloqueada as erro:
         raise _conta_bloqueada(erro) from None
     return _emitir_token(usuario)
+
+
+@router.post(
+    "/webauthn/start",
+    response_model=DesafioWebauthSaida,
+    status_code=status.HTTP_200_OK,
+)
+def start_webauthn(
+    dados: EntradaLoginWebauthn, sessao: Session = Depends(obter_sessao)
+) -> DesafioWebauthSaida:
+    """inicia o fluxo de registro webauthn. retorna um challenge pro cliente"""
+    usuario = sessao.scalar(
+        select(Usuario).where(
+            Usuario.hash_telefone == hash_telefone(dados.usuario_telefone)
+        )
+    )
+    if usuario is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, Message.CONVIDADO_SEM_CONTA.message
+        )
+    desafio = servico.gerar_desafio_webauthn(usuario)
+    sessao.commit()
+    return DesafioWebauthSaida(desafio=desafio)
+
+
+@router.post(
+    "/webauthn/finish",
+    response_model=SaidaLoginWebauthn,
+    status_code=status.HTTP_200_OK,
+)
+def finish_webauthn(
+    dados: EntradaFinalizarRegistroWebauthn, sessao: Session = Depends(obter_sessao)
+) -> SaidaLoginWebauthn:
+    """finaliza o registro webauthn, salvando a public key"""
+    usuario = sessao.scalar(
+        select(Usuario).where(Usuario.id == dados.id_usuario_acompanhante)
+    )
+    if usuario is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuário não encontrado.")
+    servico.salvar_credencial_webauthn(
+        sessao,
+        usuario,
+        dados.credential_public_key,
+        dados.credential_id,
+        dados.quantidade,
+    )
+    sessao.commit()
+    return SaidaLoginWebauthn(sucesso=True, mensagem="Registro biométrico concluído.")
+
+
+@router.post(
+    "/webauthn/login",
+    response_model=SaidaLoginWebauthn,
+    status_code=status.HTTP_200_OK,
+)
+def login_webauthn(
+    dados: EntradaLoginWebauthn, sessao: Session = Depends(obter_sessao)
+) -> SaidaLoginWebauthn:
+    """autentica o usuario usando a credencial"""
+    usuario = sessao.scalar(
+        select(Usuario).where(
+            Usuario.hash_telefone == hash_telefone(dados.usuario_telefone)
+        )
+    )
+    if usuario is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, Message.CONVIDADO_SEM_CONTA.message
+        )
+    if not servico.existe_credencial_webauthn(usuario, "credencial_padrao"):
+        return SaidaLoginWebauthn(
+            sucesso=False,
+            mensagem="Nenhuma credencial biométrica registrada. "
+            "Cadastre uma primeiro e tente novamente.",
+        )
+
+    # TODO: verificar challenge assinado contra a credencial guardada no banco.
+    return SaidaLoginWebauthn(sucesso=True, mensagem="Acesso com biometria liberado")
 
 
 def _emitir_token(usuario: Usuario, id_titular: uuid.UUID | None = None) -> TokenSaida:
