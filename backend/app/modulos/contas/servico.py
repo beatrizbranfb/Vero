@@ -217,3 +217,24 @@ def contas_em_aberto_entre(
 def id_da_categoria(sessao: Session, nome: str) -> int | None:
     """Id da categoria com esse nome na tblCategoria, ou None se não existir."""
     return sessao.scalar(select(Categoria.id).where(Categoria.nome == nome))
+
+
+def contas_do_periodo(
+    sessao: Session, usuario_id: uuid.UUID, inicio: date, fim: date
+) -> list[Conta]:
+    """RF38: contas do usuário que vencem entre as datas (inclusive), pagas ou não."""
+    comando = (
+        select(Conta)
+        .where(
+            Conta.usuario_id == usuario_id,
+            Conta.vencimento_em >= inicio,
+            Conta.vencimento_em <= fim,
+        )
+        .order_by(Conta.vencimento_em, Conta.criado_em)
+    )
+    return list(sessao.scalars(comando))
+
+
+def nomes_das_categorias(sessao: Session) -> dict[int, str]:
+    """Nome de cada categoria pelo id, para mostrar ao lado dos registros."""
+    return {c.id: c.nome for c in sessao.scalars(select(Categoria))}
