@@ -141,7 +141,7 @@ def salvar_credencial_webauthn(
         "public_key": credential_public_key,
         "counter": quantidade,
     }
-    usuario.credencial_webauthn = credencial_existente
+    usuario.credencial_webauthn = json.dumps(credencial_existente)
     sessao.add(usuario)
 
 
