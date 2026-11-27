@@ -121,6 +121,7 @@ class EntradaFinalizarRegistroWebauthn(BaseModel):
 
 class EntradaLoginWebauthn(BaseModel):
     usuario_telefone: Telefone
+    credencial_id: str
 
 
 class SaidaLoginWebauthn(BaseModel):

@@ -310,7 +310,11 @@ class TestWebAuthnLogin:
     ) -> None:
         """usuario sem credencial biometrica cadastrada recebe mensagem adequada"""
         resp = cliente.post(
-            "/api/v1/auth/webauthn/login", json={"usuario_telefone": usuario.telefone}
+            "/api/v1/auth/webauthn/login",
+            json={
+                "usuario_telefone": usuario.telefone,
+                "credential_id": "cred-key-123",
+            },
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -324,6 +328,22 @@ class TestWebAuthnLogin:
         self, cliente: TestClient, usuario: Usuario, sessao: Session
     ) -> None:
         """usuario com credencial cadastrada tem o acesso liberado"""
+        servico = __import__("app.modulos.identidade.servico", fromlist=["servico"])
+        servico.salvar_credencial_webauthn(
+            sessao, usuario, "public-key", "cred-key-123", 1
+        )
+        sessao.commit()
+        resp = cliente.post(
+            "/api/v1/auth/webauthn/login",
+            json={
+                "usuario_telefone": usuario.telefone,
+                "credential_id": "cred-key-123",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["sucesso"] is True
+        assert "biometria" in body["mensagem"].lower()
 
         servico = __import__("app.modulos.identidade.servico", fromlist=["servico"])
         servico.salvar_credencial_webauthn(

@@ -243,7 +243,8 @@ def login_webauthn(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, Message.CONVIDADO_SEM_CONTA.message
         )
-    if not servico.credencial_webauthn_existe(usuario, "credencial_padrao"):
+
+    if not servico.credencial_webauthn_existe(usuario, dados.credencial_id):
         return SaidaLoginWebauthn(
             sucesso=False,
             mensagem="Nenhuma credencial biométrica registrada. "

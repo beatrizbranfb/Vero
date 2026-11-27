@@ -157,4 +157,7 @@ def credencial_webauthn_existe(usuario: Usuario, credencial_id: str) -> bool:
         except json.JSONDecodeError:
             return False
 
-    return credencial_id in credencial  # true ou false
+    if not isinstance(credencial, dict):
+        return False
+
+    return credencial_id in credencial
