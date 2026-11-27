@@ -114,7 +114,7 @@ def _segundos_ate(momento: datetime, agora: datetime) -> int:
     return max(1, math.ceil((momento - agora).total_seconds()))
 
 
-def gerar_desafio_webauthn(usuario: Usuario) -> str:
+def desafio_webauthn_gerar(usuario: Usuario) -> str:
     """gera um desafio unico para o webauthn e associa ao usuario"""
     desafio = uuid.uuid4().hex
     atual = usuario.versao_token if usuario.versao_token is not None else 0

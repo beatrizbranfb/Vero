@@ -100,7 +100,7 @@ class ConviteRecebidoSaida(BaseModel):
     data_convite: datetime
 
 
-class DesafioWebauthSaida(BaseModel):
+class DesafioWebauthnSaida(BaseModel):
     desafio: str
 
 

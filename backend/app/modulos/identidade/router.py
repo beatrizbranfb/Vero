@@ -11,9 +11,10 @@ from app.modulos.identidade.esquemas import (
     CadastroEntrada,
     ConviteEntrada,
     ConviteRecebidoSaida,
-    DesafioWebauthSaida,
+    DesafioWebauthnSaida,
     EntradaFinalizarRegistroWebauthn,
     EntradaLoginWebauthn,
+    EntradaRegistroWebauthn,
     EsqueciPinEntrada,
     EsqueciPinSaida,
     LoginPinEntrada,
@@ -178,12 +179,12 @@ def trocar_pin(
 
 @router.post(
     "/webauthn/start",
-    response_model=DesafioWebauthSaida,
+    response_model=DesafioWebauthnSaida,
     status_code=status.HTTP_200_OK,
 )
 def start_webauthn(
-    dados: EntradaLoginWebauthn, sessao: Session = Depends(obter_sessao)
-) -> DesafioWebauthSaida:
+    dados: EntradaRegistroWebauthn, sessao: Session = Depends(obter_sessao)
+) -> DesafioWebauthnSaida:
     """inicia o fluxo de registro webauthn. retorna um challenge pro cliente"""
     usuario = sessao.scalar(
         select(Usuario).where(
@@ -194,9 +195,9 @@ def start_webauthn(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, Message.CONVIDADO_SEM_CONTA.message
         )
-    desafio = servico.gerar_desafio_webauthn(usuario)
+    desafio = servico.desafio_webauthn_gerar(usuario)
     sessao.commit()
-    return DesafioWebauthSaida(desafio=desafio)
+    return DesafioWebauthnSaida(desafio=desafio)
 
 
 @router.post(
@@ -218,7 +219,7 @@ def finish_webauthn(
         usuario,
         dados.credential_public_key,
         dados.credential_id,
-        dados.quantidade,
+        dados.counter,
     )
     sessao.commit()
     return SaidaLoginWebauthn(sucesso=True, mensagem="Registro biométrico concluído.")
@@ -242,7 +243,7 @@ def login_webauthn(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, Message.CONVIDADO_SEM_CONTA.message
         )
-    if not servico.existe_credencial_webauthn(usuario, "credencial_padrao"):
+    if not servico.credencial_webauthn_existe(usuario, "credencial_padrao"):
         return SaidaLoginWebauthn(
             sucesso=False,
             mensagem="Nenhuma credencial biométrica registrada. "
