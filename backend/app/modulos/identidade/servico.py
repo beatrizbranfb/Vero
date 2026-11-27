@@ -127,7 +127,7 @@ def salvar_credencial_webauthn(
     usuario: Usuario,
     credential_public_key: str,
     credential_id: str,
-    quantidade: int,
+    counter: int,
 ) -> None:
     "salva a chave pública do credential no usuario pra um login futuro"
     credencial_existente = getattr(usuario, "credencial_webauthn", None) or {}
@@ -139,13 +139,13 @@ def salvar_credencial_webauthn(
 
     credencial_existente[credential_id] = {
         "public_key": credential_public_key,
-        "counter": quantidade,
+        "counter": counter,
     }
     usuario.credencial_webauthn = json.dumps(credencial_existente)
     sessao.add(usuario)
 
 
-def existe_credencial_webauthn(usuario: Usuario, credencial_id: str) -> bool:
+def credencial_webauthn_existe(usuario: Usuario, credencial_id: str) -> bool:
     """verifica se ja existe credencial registrada com o id"""
     credencial = getattr(usuario, "credencial_webauthn", None)
     if not credencial:

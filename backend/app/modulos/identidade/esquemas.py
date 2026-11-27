@@ -108,7 +108,7 @@ class EntradaRegistroWebauthn(BaseModel):
     usuario_telefone: Telefone
 
 
-class SaidaRegistroWebsauthn(BaseModel):
+class SaidaRegistroWebauthn(BaseModel):
     desafio: str
 
 
@@ -116,7 +116,7 @@ class EntradaFinalizarRegistroWebauthn(BaseModel):
     id_usuario_acompanhante: uuid.UUID
     credential_public_key: str
     credential_id: str
-    quantidade: int
+    counter: int
 
 
 class EntradaLoginWebauthn(BaseModel):
