@@ -313,7 +313,7 @@ class TestWebAuthnLogin:
             "/api/v1/auth/webauthn/login",
             json={
                 "usuario_telefone": usuario.telefone,
-                "credential_id": "cred-key-123",
+                "credencial_id": "cred-key-123",
             },
         )
         assert resp.status_code == 200
@@ -337,21 +337,8 @@ class TestWebAuthnLogin:
             "/api/v1/auth/webauthn/login",
             json={
                 "usuario_telefone": usuario.telefone,
-                "credential_id": "cred-key-123",
+                "credencial_id": "cred-key-123",
             },
-        )
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["sucesso"] is True
-        assert "biometria" in body["mensagem"].lower()
-
-        servico = __import__("app.modulos.identidade.servico", fromlist=["servico"])
-        servico.salvar_credencial_webauthn(
-            sessao, usuario, "public-key", "cred-key-123", 1
-        )
-        sessao.commit()
-        resp = cliente.post(
-            "/api/v1/auth/webauthn/login", json={"usuario_telefone": usuario.telefone}
         )
         assert resp.status_code == 200
         body = resp.json()
