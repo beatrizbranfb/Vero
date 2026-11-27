@@ -264,7 +264,7 @@ class TestWebAuthnStart:
 
     def test_registro_sem_usuario_retorna_404(self, cliente: TestClient) -> None:
         resp = cliente.post(
-            "/api/v1/auth/webauthn/start", json={"usuario_telefone": 5561900000000}
+            "/api/v1/auth/webauthn/start", json={"usuario_telefone": "5561900000000"}
         )
         assert resp.status_code == 404
 

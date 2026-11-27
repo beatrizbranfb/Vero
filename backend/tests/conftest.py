@@ -5,6 +5,7 @@ do workflow). Cada teste roda numa transação desfeita no fim, então nada fica
 banco. Não aponte para o Supabase.
 """
 
+import secrets
 import uuid
 from collections.abc import Callable, Iterator
 from datetime import date
@@ -55,7 +56,7 @@ def sessao(engine) -> Iterator[Session]:
 
 @pytest.fixture
 def usuario(sessao: Session) -> Usuario:
-    telefone = "55619" + uuid.uuid4().hex[:8]
+    telefone = f"55619{secrets.randbelow(100_000_000):08d}"
     u = Usuario(
         id=uuid.uuid4(),
         nome="Maria",
