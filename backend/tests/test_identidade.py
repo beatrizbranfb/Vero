@@ -331,7 +331,7 @@ class TestWebAuthnLogin:
         )
         sessao.commit()
         resp = cliente.post(
-            "api/v1/auth.webauthn/login", json={"usuario_telefone": usuario.telefone}
+            "/api/v1/auth/webauthn/login", json={"usuario_telefone": usuario.telefone}
         )
         assert resp.status_code == 200
         body = resp.json()
