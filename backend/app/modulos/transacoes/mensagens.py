@@ -18,11 +18,12 @@ class Message(Enum):
     LEMBRETE_ASSUNTO = "Lembrete de vencimento"
     LEMBRETE_NO_DIA = (
         "Lembrete: sua conta '{descricao}' vence hoje, no valor de {valor}. "
-        "Pague hoje para evitar juros."
+        "Pague hoje para evitar juros. Responda *pago* para dar baixa."
     )
     LEMBRETE_ANTECIPADO = (
         "Lembrete: sua conta '{descricao}' vence {quando}, no dia {data}, "
-        "no valor de {valor}. Separe o dinheiro para pagar em dia."
+        "no valor de {valor}. Separe o dinheiro para pagar em dia. "
+        "Responda *pago* para dar baixa."
     )
     LEMBRETE_AMANHA = "amanhã"
     LEMBRETE_EM_DIAS = "em {dias} dias"

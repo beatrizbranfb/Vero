@@ -107,7 +107,8 @@ def test_avisa_tres_dias_antes_do_vencimento(
 
     assert wpp.para(maria.telefone) == [
         "Lembrete: sua conta 'Conta de Luz' vence em 3 dias, no dia 27/11, "
-        "no valor de R$ 120,00. Separe o dinheiro para pagar em dia."
+        "no valor de R$ 120,00. Separe o dinheiro para pagar em dia. "
+        "Responda *pago* para dar baixa."
     ]
     assert _avisos(sessao, conta) == ["antecipado"]
 

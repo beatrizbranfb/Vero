@@ -13,6 +13,33 @@ def resposta_saldo(saldo: Decimal) -> str:
     return f"Neste mês, faltam *{valor}* para cobrir suas despesas."
 
 
+def pedir_escolha_conta(opcoes: list[str]) -> str:
+    linhas = ["Encontrei mais de uma conta com aviso. Qual você pagou?"]
+    linhas.extend(
+        f"{numero}. {descricao}" for numero, descricao in enumerate(opcoes, 1)
+    )
+    linhas.append("Responda com o número ou o nome da conta.")
+    return "\n".join(linhas)
+
+
+def conta_marcada_paga(descricao: str | None) -> str:
+    nome = descricao or "Sua conta"
+    return f"Pronto! Marquei *{nome}* como paga."
+
+
+def conta_ja_marcada_paga(descricao: str | None) -> str:
+    nome = descricao or "Essa conta"
+    return f"{nome} já está marcada como paga."
+
+
+def nenhuma_conta_para_pagar() -> str:
+    return "Não encontrei uma conta em aberto com aviso recente para dar baixa."
+
+
+def escolha_conta_cancelada() -> str:
+    return "Tudo bem, não dei baixa em nenhuma conta."
+
+
 def boas_vindas(nome: str | None = None) -> str:
     saudacao = f"Olá, {nome}!" if nome else "Olá!"
     return (
