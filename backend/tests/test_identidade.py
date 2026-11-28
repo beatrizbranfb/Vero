@@ -245,3 +245,102 @@ class TestUsuarioSaida:
         )
         assert resp.status_code == 201
         assert resp.json()["tem_pin"] is True
+
+
+class TestWebAuthnStart:
+    """POST /api/v1/auth/webauthn/start"""
+
+    def test_registro_inicia_com_challenge(
+        self, cliente: TestClient, usuario: Usuario
+    ) -> None:
+        """usuario cadastrado recebe um desafio para registrar passkey"""
+        resp = cliente.post(
+            "/api/v1/auth/webauthn/start", json={"usuario_telefone": usuario.telefone}
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "desafio" in body
+        assert len(body["desafio"]) == 32
+
+    def test_registro_sem_usuario_retorna_404(self, cliente: TestClient) -> None:
+        resp = cliente.post(
+            "/api/v1/auth/webauthn/start", json={"usuario_telefone": "5561900000000"}
+        )
+        assert resp.status_code == 404
+
+
+class TestWebAuthnFinish:
+    """POST /api/v1/auth/webauthn/finish"""
+
+    def test_registro_finaliza_salvando_credencial(
+        self, cliente: TestClient, usuario: Usuario, sessao: Session
+    ) -> None:
+        """finaliza o registro e salva a public key do usuario"""
+        resp = cliente.post(
+            "/api/v1/auth/webauthn/finish",
+            json={
+                "id_usuario_acompanhante": str(usuario.id),
+                "credential_public_key": "key",
+                "credential_id": "cred-key-123",
+                "counter": 1,
+            },
+        )
+        assert resp.status_code == 200
+        usuario_atualizado = sessao.get(Usuario, usuario.id)
+        assert usuario_atualizado.credencial_webauthn is not None
+
+    def test_registro_sem_usuario_retorna_404(self, cliente: TestClient) -> None:
+        resp = cliente.post(
+            "/api/v1/auth/webauthn/finish",
+            json={
+                "id_usuario_acompanhante": str(uuid.uuid4()),
+                "credential_public_key": "key",
+                "credential_id": "id",
+                "counter": 1,
+            },
+        )
+        assert resp.status_code == 404
+
+
+class TestWebAuthnLogin:
+    """POST /api/v1/auth/webauthn/login"""
+
+    def test_login_sem_credencial_registrada(
+        self, cliente: TestClient, usuario: Usuario
+    ) -> None:
+        """usuario sem credencial biometrica cadastrada recebe mensagem adequada"""
+        resp = cliente.post(
+            "/api/v1/auth/webauthn/login",
+            json={
+                "usuario_telefone": usuario.telefone,
+                "credencial_id": "cred-key-123",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["sucesso"] is False
+        assert (
+            "credencial" in body["mensagem"].lower()
+            or "biometria" in body["mensagem"].lower()
+        )
+
+    def test_login_com_credencial_registrada(
+        self, cliente: TestClient, usuario: Usuario, sessao: Session
+    ) -> None:
+        """usuario com credencial cadastrada tem o acesso liberado"""
+        servico = __import__("app.modulos.identidade.servico", fromlist=["servico"])
+        servico.salvar_credencial_webauthn(
+            sessao, usuario, "public-key", "cred-key-123", 1
+        )
+        sessao.commit()
+        resp = cliente.post(
+            "/api/v1/auth/webauthn/login",
+            json={
+                "usuario_telefone": usuario.telefone,
+                "credencial_id": "cred-key-123",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["sucesso"] is True
+        assert "biometria" in body["mensagem"].lower()

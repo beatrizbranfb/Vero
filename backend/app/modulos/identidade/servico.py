@@ -1,6 +1,8 @@
 """Regras de cadastro, login e bloqueio por tentativas."""
 
+import json
 import math
+import uuid
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 
@@ -110,3 +112,52 @@ def conferir_pin(sessao: Session, usuario: Usuario, segredo: str) -> Usuario:
 
 def _segundos_ate(momento: datetime, agora: datetime) -> int:
     return max(1, math.ceil((momento - agora).total_seconds()))
+
+
+def desafio_webauthn_gerar(usuario: Usuario) -> str:
+    """gera um desafio unico para o webauthn e associa ao usuario"""
+    desafio = uuid.uuid4().hex
+    atual = usuario.versao_token if usuario.versao_token is not None else 0
+    usuario.versao_token = atual + 1
+    return desafio
+
+
+def salvar_credencial_webauthn(
+    sessao: Session,
+    usuario: Usuario,
+    credential_public_key: str,
+    credential_id: str,
+    counter: int,
+) -> None:
+    "salva a chave pública do credential no usuario pra um login futuro"
+    credencial_existente = getattr(usuario, "credencial_webauthn", None) or {}
+    if isinstance(credencial_existente, str):
+        try:
+            credencial_existente = json.loads(credencial_existente)
+        except json.JSONDecodeError:
+            credencial_existente = {}
+
+    credencial_existente[credential_id] = {
+        "public_key": credential_public_key,
+        "counter": counter,
+    }
+    usuario.credencial_webauthn = json.dumps(credencial_existente)
+    sessao.add(usuario)
+
+
+def credencial_webauthn_existe(usuario: Usuario, credencial_id: str) -> bool:
+    """verifica se ja existe credencial registrada com o id"""
+    credencial = getattr(usuario, "credencial_webauthn", None)
+    if not credencial:
+        return False
+
+    if isinstance(credencial, str):
+        try:
+            credencial = json.loads(credencial)
+        except json.JSONDecodeError:
+            return False
+
+    if not isinstance(credencial, dict):
+        return False
+
+    return credencial_id in credencial

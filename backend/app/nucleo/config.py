@@ -83,9 +83,9 @@ class Settings(BaseSettings):
     AI_TIMEOUT_SEGUNDOS: float = 8.0
 
     # WhatsApp / Evolution API
-    EVOLUTION_URL: str
-    AUTHENTICATION_API_KEY: str
-    INSTANCE_NAME: str
+    EVOLUTION_URL: str = ""
+    AUTHENTICATION_API_KEY: str = ""
+    INSTANCE_NAME: str = ""
 
     # Transcrição de áudio (RF13 / RNF04)
     TRANSCRICAO_AUDIO: AdaptadorTranscricao = AdaptadorTranscricao.WHISPER

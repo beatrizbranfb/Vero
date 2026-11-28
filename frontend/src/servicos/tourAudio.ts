@@ -8,7 +8,7 @@ import { obterToken } from './api';
 const PREFIXO_TOUR_VISTO = 'vero_tour_audio_visto';
 
 /** Id do usuário logado, lido do campo `sub` do token (sem validar a assinatura). */
-const idUsuarioLogado = (): string | null => {
+export const idUsuarioLogado = (): string | null => {
   const token = obterToken();
   const corpo = token?.split('.')[1];
   if (!corpo) return null;

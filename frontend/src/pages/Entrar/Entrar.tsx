@@ -4,20 +4,117 @@ import {
   CampoTexto,
   TecladoNumerico,
   AlertaStatus,
+  IconDigital,
 } from '../../components';
 import { useNavegacao } from '../../router';
-import { entrarComPin, ErroApi } from '../../servicos';
+import {
+  ativarBiometria,
+  biometriaAtivaNesteAparelho,
+  biometriaDisponivel,
+  entrarComBiometria,
+  entrarComPin,
+  ErroApi,
+  jaPerguntouBiometria,
+  marcarBiometriaPerguntada,
+  mensagemErroBiometria,
+  pedirDesafioBiometria,
+  telefoneDaBiometria,
+} from '../../servicos';
 import { formatarCelular, validarCelular } from '../../utils/telefone';
 import logoVero from '../../assets/logoVero';
 import styles from '../Cadastro/Cadastro.module.css';
 
 export const Entrar = () => {
   const { navegar } = useNavegacao();
-  const [celular, setCelular] = useState('(61) 99999-8888');
+  // Quem ativou a digital neste aparelho já encontra o próprio celular
+  const [celular, setCelular] = useState(() => {
+    const salvo = telefoneDaBiometria();
+    return salvo ? formatarCelular(salvo) : '(61) 99999-8888';
+  });
   const [pin, setPin] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const campoCelularRef = useRef<HTMLInputElement>(null);
+
+  // Entrar com digital ou rosto (RF02): o botão só aparece no aparelho que já
+  // ativou e tem leitor biométrico
+  const [podeBiometria, setPodeBiometria] = useState(false);
+  // Depois do PIN, oferece ativar a digital uma vez por pessoa neste aparelho
+  const [oferta, setOferta] = useState<'nao' | 'pergunta' | 'ativada'>('nao');
+  const [mensagemOferta, setMensagemOferta] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  // Desafio que o celular assina ao ativar a digital
+  const desafioRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    if (biometriaAtivaNesteAparelho()) {
+      biometriaDisponivel().then((disponivel) => {
+        if (ativo) setPodeBiometria(disponivel);
+      });
+    }
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const entrarComDigital = async () => {
+    setCarregando(true);
+    setErro(null);
+    setAviso(null);
+    try {
+      const resultado = await entrarComBiometria(
+        validarCelular(celular) ? celular : undefined
+      );
+      if (resultado.entrou) {
+        navegar('/inicio');
+      } else {
+        setAviso(resultado.mensagem);
+      }
+    } catch (e) {
+      setErro(e instanceof ErroApi ? e.detalhe : mensagemErroBiometria(e));
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  /**
+   * Antes do PIN: se vamos oferecer a digital, já pede o desafio. A API renova a
+   * versão do token ao gerar o desafio, então ele precisa vir antes do login.
+   */
+  const desafioParaOferta = async (): Promise<string | null> => {
+    const oferecer =
+      !biometriaAtivaNesteAparelho() &&
+      !jaPerguntouBiometria(celular) &&
+      (await biometriaDisponivel());
+    if (!oferecer) return null;
+    try {
+      return await pedirDesafioBiometria(celular);
+    } catch {
+      // Sem desafio, só não oferece a digital desta vez
+      return null;
+    }
+  };
+
+  const responderOferta = async (aceitou: boolean) => {
+    marcarBiometriaPerguntada(celular);
+    if (!aceitou) {
+      navegar('/inicio');
+      return;
+    }
+    setCarregando(true);
+    setErro(null);
+    try {
+      setMensagemOferta(
+        await ativarBiometria(desafioRef.current ?? '', celular)
+      );
+      setOferta('ativada');
+    } catch (e) {
+      setErro(e instanceof ErroApi ? e.detalhe : mensagemErroBiometria(e));
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   const digitarPin = (digito: string) => {
     if (pin.length < 4 && !carregando) {
@@ -46,10 +143,18 @@ export const Entrar = () => {
 
     setCarregando(true);
     setErro(null);
+    setAviso(null);
 
     try {
+      const desafio = await desafioParaOferta();
       await entrarComPin(celular, pin);
-      navegar('/inicio');
+      // Depois do PIN: pergunta se quer usar a digital, uma vez só
+      if (desafio) {
+        desafioRef.current = desafio;
+        setOferta('pergunta');
+      } else {
+        navegar('/inicio');
+      }
     } catch (e) {
       if (e instanceof ErroApi) {
         setErro(e.detalhe);
@@ -66,6 +171,8 @@ export const Entrar = () => {
   // Suporte à digitação pelo teclado físico do computador
   useEffect(() => {
     const tratarTeclaPressionada = (evento: KeyboardEvent) => {
+      // Na pergunta da digital não há PIN para digitar
+      if (oferta !== 'nao') return;
       // Se o usuário estiver focado no campo de celular, o input nativo cuida da digitação
       const elementoAtivo = document.activeElement;
       const estaNoInputCelular =
@@ -100,7 +207,88 @@ export const Entrar = () => {
     window.addEventListener('keydown', tratarTeclaPressionada);
     return () => window.removeEventListener('keydown', tratarTeclaPressionada);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [celular, pin, carregando]);
+  }, [celular, pin, carregando, oferta]);
+
+  if (oferta !== 'nao') {
+    return (
+      <div className={styles.pageContainer}>
+        <header className={styles.navbar}>
+          <img src={logoVero} alt="Vero" className={styles.logoImagem} />
+        </header>
+
+        <main style={{ maxWidth: '520px', margin: '0 auto', width: '100%' }}>
+          <section className={styles.card} aria-live="polite">
+            <div
+              aria-hidden="true"
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                color: 'var(--violeta-vero)',
+                marginBottom: 16,
+              }}
+            >
+              <IconDigital size={64} />
+            </div>
+
+            {oferta === 'pergunta' ? (
+              <>
+                <h1 className={styles.titulo}>
+                  Quer entrar com a digital da próxima vez?
+                </h1>
+                <p className={styles.subtitulo}>
+                  Você pode entrar no Vero com sua digital ou com o rosto, sem
+                  digitar o PIN. A digital fica só no seu celular: o Vero nunca
+                  recebe.
+                </p>
+
+                {erro && (
+                  <div style={{ marginBottom: 20 }}>
+                    <AlertaStatus tipo="erro">{erro}</AlertaStatus>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <Botao
+                    variant="primary"
+                    fullWidth
+                    carregando={carregando}
+                    onClick={() => responderOferta(true)}
+                  >
+                    Sim, usar minha digital
+                  </Botao>
+                  <Botao
+                    variant="secondary"
+                    fullWidth
+                    disabled={carregando}
+                    onClick={() => responderOferta(false)}
+                  >
+                    Agora não
+                  </Botao>
+                </div>
+                <p className={styles.subtitulo} style={{ marginTop: 16 }}>
+                  O PIN continua funcionando sempre.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className={styles.titulo}>Digital ativada</h1>
+                <div style={{ marginBottom: 20 }}>
+                  <AlertaStatus tipo="sucesso">{mensagemOferta}</AlertaStatus>
+                </div>
+                <Botao
+                  variant="primary"
+                  fullWidth
+                  onClick={() => navegar('/inicio')}
+                >
+                  Continuar
+                </Botao>
+              </>
+            )}
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.pageContainer}>
@@ -133,6 +321,32 @@ export const Entrar = () => {
           {erro && (
             <div style={{ marginBottom: 20 }}>
               <AlertaStatus tipo="erro">{erro}</AlertaStatus>
+            </div>
+          )}
+
+          {aviso && !erro && (
+            <div style={{ marginBottom: 20 }}>
+              <AlertaStatus tipo="sucesso">{aviso}</AlertaStatus>
+            </div>
+          )}
+
+          {podeBiometria && (
+            <div style={{ marginBottom: 24 }}>
+              <Botao
+                variant="primary"
+                fullWidth
+                carregando={carregando}
+                onClick={entrarComDigital}
+                icone={<IconDigital size={24} />}
+              >
+                Entrar com digital ou rosto
+              </Botao>
+              <p
+                className={styles.subtitulo}
+                style={{ textAlign: 'center', margin: '16px 0 0' }}
+              >
+                ou entre com o celular e o PIN
+              </p>
             </div>
           )}
 
