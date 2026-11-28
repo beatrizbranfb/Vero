@@ -3,7 +3,7 @@ import logging
 import re
 import unicodedata
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 
 import valkey
@@ -22,6 +22,7 @@ class CampoFaltando(StrEnum):
 
     VALOR = "valor"
     TIPO = "tipo"
+    VENCIMENTO = "vencimento"
     CATEGORIA = "categoria"
 
 
@@ -51,11 +52,14 @@ class RegistroPendente:
     # Preenchido quando o lançamento está incompleto: o assistente pediu este dado
     # e a próxima mensagem completa o lançamento, em vez de começar outro (RF16)
     faltando: CampoFaltando | None = None
+    # Preenchido quando tipo == CONTA_PAGAR (RF27)
+    vencimento: date | None = None
 
 
 class GerenciadorSessao:
     def __init__(self):
         self._sessoes_memoria: dict[str, RegistroPendente] = {}
+        self._pagamentos_memoria: dict[str, tuple[list[str], datetime]] = {}
         try:
             self._valkey = valkey.Valkey.from_url(
                 settings.VALKEY_URL, decode_responses=True
@@ -67,6 +71,70 @@ class GerenciadorSessao:
     def _chave(self, telefone: str) -> str:
         return f"vero:sessao_assistente:{telefone}"
 
+    def _chave_pagamento(self, telefone: str) -> str:
+        return f"vero:pagamento_pendente:{telefone}"
+
+    def salvar_pagamento_pendente(self, telefone: str, contas_ids: list[str]) -> None:
+        criado = datetime.now(UTC)
+        if self._valkey:
+            try:
+                self._valkey.setex(
+                    self._chave_pagamento(telefone),
+                    TEMPO_EXPIRACAO_SEGUNDOS,
+                    json.dumps({"contas": contas_ids, "criado": criado.isoformat()}),
+                )
+                return
+            except valkey.ValkeyError as erro:
+                logger.warning(
+                    "Falha ao salvar escolha de conta no Valkey (%s). Usando memória.",
+                    type(erro).__name__,
+                )
+        self._pagamentos_memoria[telefone] = (contas_ids, criado)
+
+    def obter_pagamento_pendente(self, telefone: str) -> tuple[list[str] | None, bool]:
+        agora = datetime.now(UTC)
+        if self._valkey:
+            try:
+                conteudo = self._valkey.get(self._chave_pagamento(telefone))
+                if conteudo:
+                    dados = json.loads(conteudo)
+                    criado = datetime.fromisoformat(dados["criado"])
+                    if agora - criado > timedelta(seconds=TEMPO_EXPIRACAO_SEGUNDOS):
+                        self.limpar_pagamento_pendente(telefone)
+                        return None, True
+                    return [str(conta_id) for conta_id in dados["contas"]], False
+            except (
+                valkey.ValkeyError,
+                json.JSONDecodeError,
+                KeyError,
+                TypeError,
+                ValueError,
+            ) as erro:
+                logger.warning(
+                    "Falha ao obter escolha de conta no Valkey (%s).",
+                    type(erro).__name__,
+                )
+
+        pendencia = self._pagamentos_memoria.get(telefone)
+        if pendencia is None:
+            return None, False
+        contas_ids, criado = pendencia
+        if agora - criado > timedelta(seconds=TEMPO_EXPIRACAO_SEGUNDOS):
+            self._pagamentos_memoria.pop(telefone, None)
+            return None, True
+        return contas_ids, False
+
+    def limpar_pagamento_pendente(self, telefone: str) -> None:
+        if self._valkey:
+            try:
+                self._valkey.delete(self._chave_pagamento(telefone))
+            except valkey.ValkeyError as erro:
+                logger.warning(
+                    "Falha ao limpar escolha de conta no Valkey (%s).",
+                    type(erro).__name__,
+                )
+        self._pagamentos_memoria.pop(telefone, None)
+
     def salvar_pendencia(
         self,
         telefone: str,
@@ -76,6 +144,7 @@ class GerenciadorSessao:
         descricao: str,
         origem: OrigemTransacao = OrigemTransacao.WHATSAPP_TEXTO,
         faltando: CampoFaltando | None = None,
+        vencimento: date | None = None,
     ) -> None:
         agora = datetime.now(UTC)
         pendencia = RegistroPendente(
@@ -86,6 +155,7 @@ class GerenciadorSessao:
             criado=agora,
             faltando=faltando,
             origem=origem,
+            vencimento=vencimento,
         )
 
         if self._valkey:
@@ -96,6 +166,11 @@ class GerenciadorSessao:
                 dados["origem"] = dados["origem"].value
                 dados["faltando"] = (
                     dados["faltando"].value if dados["faltando"] is not None else None
+                )
+                dados["vencimento"] = (
+                    dados["vencimento"].isoformat()
+                    if dados["vencimento"] is not None
+                    else None
                 )
                 self._valkey.setex(
                     self._chave(telefone),
@@ -126,6 +201,7 @@ class GerenciadorSessao:
 
                     valor = dados.get("valor")
                     faltando = dados.get("faltando")
+                    vencimento = dados.get("vencimento")
                     return (
                         RegistroPendente(
                             tipo=TipoTransacao(dados["tipo"]),
@@ -138,6 +214,9 @@ class GerenciadorSessao:
                                 dados.get(
                                     "origem", OrigemTransacao.WHATSAPP_TEXTO.value
                                 )
+                            ),
+                            vencimento=(
+                                date.fromisoformat(vencimento) if vencimento else None
                             ),
                         ),
                         False,

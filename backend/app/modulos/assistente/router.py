@@ -3,7 +3,7 @@ import logging
 import secrets
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import httpx
@@ -19,6 +19,7 @@ from app.modulos.assistente.extrator import (
     eh_pergunta_saldo,
     eh_saudacao,
     extrair_valor,
+    extrair_vencimento,
     identificar_categoria,
     identificar_tipo_resposta,
     normalizar_texto,
@@ -31,6 +32,12 @@ from app.modulos.assistente.sessao import (
     sessao_assistente,
 )
 from app.modulos.contas import servico as servico_contas
+from app.modulos.contas.esquemas import (
+    ContaCadastroEntrada,
+    hoje_brasilia,
+    vencimento_minimo,
+)
+from app.modulos.contas.modelos import Conta
 from app.modulos.identidade.esquemas import normalizar_telefone
 from app.modulos.identidade.modelos import Usuario
 from app.modulos.identidade.seguranca import hash_telefone
@@ -167,6 +174,9 @@ async def processar_responder(
         await enviar_mensagem(remetente, mensagens.resposta_saldo(saldo))
         return
 
+    if await _tratar_pagamento_conta(remetente, telefone, usuario, texto):
+        return
+
     pendencia, expirou = sessao_assistente.obter_pendencia(telefone)
 
     if (
@@ -206,7 +216,19 @@ async def processar_responder(
                 correcao.valor if correcao.valor is not None else pendencia.valor
             )
 
-            if correcao.valor is not None or nova_categoria != pendencia.categoria:
+            novo_vencimento = pendencia.vencimento
+            if pendencia.tipo == TipoTransacao.CONTA_PAGAR:
+                venc_corrigido = extrair_vencimento(texto)
+                if venc_corrigido is not None and venc_corrigido >= vencimento_minimo(
+                    hoje_brasilia()
+                ):
+                    novo_vencimento = venc_corrigido
+
+            if (
+                correcao.valor is not None
+                or nova_categoria != pendencia.categoria
+                or novo_vencimento != pendencia.vencimento
+            ):
                 sessao_assistente.salvar_pendencia(
                     telefone=telefone,
                     tipo=pendencia.tipo,
@@ -214,10 +236,18 @@ async def processar_responder(
                     categoria=nova_categoria,
                     descricao=pendencia.descricao,
                     origem=pendencia.origem,
+                    vencimento=novo_vencimento,
                 )
 
                 if pendencia.tipo == TipoTransacao.RECEITA:
                     resposta = mensagens.confirmacao_renda(novo_valor, nova_categoria)
+                elif (
+                    pendencia.tipo == TipoTransacao.CONTA_PAGAR
+                    and novo_vencimento is not None
+                ):
+                    resposta = mensagens.confirmacao_conta_pagar(
+                        novo_valor, novo_vencimento, nova_categoria
+                    )
                 else:
                     resposta = mensagens.confirmacao_gasto(novo_valor, nova_categoria)
 
@@ -233,6 +263,135 @@ async def processar_responder(
     intencao = processar_texto_mensagem(texto)
     resposta = responder_intencao(telefone, usuario, intencao, origem)
     await enviar_mensagem(remetente, resposta)
+
+
+def _eh_comando_pagar(texto: str) -> bool:
+    return normalizar_resposta(texto) in {
+        "pago",
+        "paga",
+        "paguei",
+        "ja paguei",
+        "pago sim",
+    }
+
+
+def _descricao_opcao_conta(conta: Conta) -> str:
+    nome = conta.descricao or "Conta sem descrição"
+    return f"{nome} — vence em {conta.vencimento_em:%d/%m}, {mensagens.formatar_moeda(round(conta.valor * 100))}"
+
+
+def _indice_conta_escolhida(texto: str, contas: list[Conta]) -> int | None:
+    normalizado = normalizar_resposta(texto)
+    if normalizado.isdigit():
+        indice = int(normalizado) - 1
+        return indice if 0 <= indice < len(contas) else None
+
+    termos_genericos = {"conta", "descricao", "sem descricao"}
+    correspondencias = [
+        indice
+        for indice, conta in enumerate(contas)
+        if (descricao := normalizar_resposta(conta.descricao or "conta sem descricao"))
+        in normalizado
+        or (
+            len(normalizado) >= 3
+            and normalizado not in termos_genericos
+            and normalizado in descricao
+        )
+    ]
+    return correspondencias[0] if len(correspondencias) == 1 else None
+
+
+async def _tratar_pagamento_conta(
+    remetente: str, telefone: str, usuario: Usuario, texto: str
+) -> bool:
+    ids_pendentes, _ = sessao_assistente.obter_pagamento_pendente(telefone)
+    if ids_pendentes is not None:
+        if quer_cancelar(texto):
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(remetente, mensagens.escolha_conta_cancelada())
+            return True
+
+        try:
+            contas_ids = [uuid.UUID(conta_id) for conta_id in ids_pendentes]
+        except (TypeError, ValueError):
+            logger.warning("Escolha de conta inválida na sessão do assistente.")
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+            return True
+
+        with SessaoLocal() as sessao_db:
+            contas_encontradas = servico_contas.contas_por_ids(
+                sessao_db, usuario.id, contas_ids
+            )
+        por_id = {str(conta.id): conta for conta in contas_encontradas}
+        contas = [por_id[conta_id] for conta_id in ids_pendentes if conta_id in por_id]
+        if not contas:
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+            return True
+
+        indice = _indice_conta_escolhida(texto, contas)
+        if indice is None:
+            await enviar_mensagem(
+                remetente,
+                mensagens.pedir_escolha_conta(
+                    [_descricao_opcao_conta(conta) for conta in contas]
+                ),
+            )
+            return True
+
+        conta = contas[indice]
+        if conta.pagamento_em is not None:
+            sessao_assistente.limpar_pagamento_pendente(telefone)
+            await enviar_mensagem(
+                remetente, mensagens.conta_ja_marcada_paga(conta.descricao)
+            )
+            return True
+
+        with SessaoLocal() as sessao_db:
+            try:
+                servico_contas.definir_pagamento(
+                    sessao_db, usuario.id, conta.id, paga=True
+                )
+            except servico_contas.ContaNaoEncontrada:
+                sessao_assistente.limpar_pagamento_pendente(telefone)
+                await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+                return True
+        sessao_assistente.limpar_pagamento_pendente(telefone)
+        await enviar_mensagem(remetente, mensagens.conta_marcada_paga(conta.descricao))
+        return True
+
+    if not _eh_comando_pagar(texto):
+        return False
+
+    with SessaoLocal() as sessao_db:
+        contas = servico_transacoes.contas_com_aviso_whatsapp(sessao_db, usuario.id)
+        if not contas:
+            await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+            return True
+        if len(contas) == 1:
+            try:
+                conta = servico_contas.definir_pagamento(
+                    sessao_db, usuario.id, contas[0].id, paga=True
+                )
+            except servico_contas.ContaNaoEncontrada:
+                await enviar_mensagem(remetente, mensagens.nenhuma_conta_para_pagar())
+                return True
+            await enviar_mensagem(
+                remetente, mensagens.conta_marcada_paga(conta.descricao)
+            )
+            return True
+
+    sessao_assistente.salvar_pagamento_pendente(
+        telefone, [str(conta.id) for conta in contas]
+    )
+    await enviar_mensagem(
+        remetente,
+        mensagens.pedir_escolha_conta(
+            [_descricao_opcao_conta(conta) for conta in contas]
+        ),
+    )
+    return True
 
 
 def responder_intencao(
@@ -288,6 +447,7 @@ def pedir_confirmacao(
     categoria: str,
     descricao: str,
     origem: OrigemTransacao = OrigemTransacao.WHATSAPP_TEXTO,
+    vencimento: date | None = None,
 ) -> str:
     sessao_assistente.salvar_pendencia(
         telefone=telefone,
@@ -296,9 +456,12 @@ def pedir_confirmacao(
         categoria=categoria,
         descricao=descricao,
         origem=origem,
+        vencimento=vencimento,
     )
     if tipo == TipoTransacao.RECEITA:
         return mensagens.confirmacao_renda(valor, categoria)
+    if tipo == TipoTransacao.CONTA_PAGAR and vencimento is not None:
+        return mensagens.confirmacao_conta_pagar(valor, vencimento, categoria)
     return mensagens.confirmacao_gasto(valor, categoria)
 
 
@@ -320,12 +483,15 @@ PALAVRAS_CANCELAR = {
 
 
 def proximo_faltando(pendencia: RegistroPendente) -> CampoFaltando | None:
-    """Ordem das perguntas: valor, depois se foi gasto ou entrada, depois com o quê.
+    """Ordem das perguntas: valor, depois tipo (gasto/entrada/conta a pagar),
+    depois vencimento (se conta a pagar), depois com o quê.
     Categoria vazia quer dizer que ninguém a identificou (ex.: foto ilegível)."""
     if pendencia.valor is None:
         return CampoFaltando.VALOR
     if pendencia.tipo == TipoTransacao.DESCONHECIDO:
         return CampoFaltando.TIPO
+    if pendencia.tipo == TipoTransacao.CONTA_PAGAR and pendencia.vencimento is None:
+        return CampoFaltando.VENCIMENTO
     if not pendencia.categoria:
         return CampoFaltando.CATEGORIA
     return None
@@ -340,7 +506,12 @@ def completar_lancamento(telefone: str, pendencia: RegistroPendente, texto: str)
         return mensagens.registro_cancelado()
 
     campo = pendencia.faltando
-    tipo, valor, categoria = pendencia.tipo, pendencia.valor, pendencia.categoria
+    tipo, valor, categoria, vencimento = (
+        pendencia.tipo,
+        pendencia.valor,
+        pendencia.categoria,
+        pendencia.vencimento,
+    )
 
     if campo == CampoFaltando.VALOR:
         valor, _ = extrair_valor(texto)
@@ -352,6 +523,11 @@ def completar_lancamento(telefone: str, pendencia: RegistroPendente, texto: str)
         if tipo == TipoTransacao.DESCONHECIDO:
             _manter_rascunho(telefone, pendencia)
             return mensagens.tipo_ainda_nao_entendido()
+    elif campo == CampoFaltando.VENCIMENTO:
+        vencimento = extrair_vencimento(texto, aceitar_dia_isolado=True)
+        if vencimento is None or vencimento < vencimento_minimo(hoje_brasilia()):
+            _manter_rascunho(telefone, pendencia)
+            return mensagens.vencimento_ainda_nao_entendido()
     elif campo == CampoFaltando.CATEGORIA:
         # Sem palavra conhecida, fica em "Outros": a pessoa já disse o que foi
         categoria = identificar_categoria(normalizar_texto(texto), tipo)
@@ -363,11 +539,18 @@ def completar_lancamento(telefone: str, pendencia: RegistroPendente, texto: str)
         descricao=pendencia.descricao or texto.strip(),
         criado=pendencia.criado,
         origem=pendencia.origem,
+        vencimento=vencimento,
     )
     falta = proximo_faltando(atualizada)
     if falta is None:
         return pedir_confirmacao(
-            telefone, tipo, valor, categoria, atualizada.descricao, atualizada.origem
+            telefone,
+            tipo,
+            valor,
+            categoria,
+            atualizada.descricao,
+            atualizada.origem,
+            atualizada.vencimento,
         )
 
     atualizada.faltando = falta
@@ -384,7 +567,14 @@ def _pergunta(pendencia: RegistroPendente, motivo: str | None = None) -> str:
         )
     if pendencia.faltando == CampoFaltando.TIPO:
         return mensagens.pedir_tipo(pendencia.valor, motivo)
-    return mensagens.pedir_categoria(receita, pendencia.valor, motivo)
+    if pendencia.faltando == CampoFaltando.VENCIMENTO:
+        return mensagens.pedir_vencimento(pendencia.valor, motivo)
+    return mensagens.pedir_categoria(
+        receita,
+        pendencia.valor,
+        motivo,
+        conta_pagar=pendencia.tipo == TipoTransacao.CONTA_PAGAR,
+    )
 
 
 def _manter_rascunho(telefone: str, pendencia: RegistroPendente) -> None:
@@ -396,6 +586,7 @@ def _manter_rascunho(telefone: str, pendencia: RegistroPendente) -> None:
         descricao=pendencia.descricao,
         faltando=pendencia.faltando,
         origem=pendencia.origem,
+        vencimento=pendencia.vencimento,
     )
 
 
@@ -413,7 +604,7 @@ CATEGORIA_NO_APP = {
 
 
 def _categoria_do_app(sessao_db, pendencia: RegistroPendente) -> int | None:
-    if pendencia.tipo != TipoTransacao.GASTO:
+    if pendencia.tipo not in (TipoTransacao.GASTO, TipoTransacao.CONTA_PAGAR):
         return None
     nome = CATEGORIA_NO_APP.get(pendencia.categoria)
     if nome is None:
@@ -429,14 +620,39 @@ def _categoria_do_app(sessao_db, pendencia: RegistroPendente) -> int | None:
 def registrar_confirmado(
     telefone: str, usuario_id: uuid.UUID, pendencia: RegistroPendente
 ) -> str:
-    """Grava o lançamento confirmado. Se o banco falhar, avisa e guarda a pendência
-    para a pessoa tentar de novo: nada é perdido em silêncio (RF16)."""
+    """Grava o lançamento confirmado (transação ou conta a pagar). Se o banco falhar,
+    avisa e guarda a pendência para a pessoa tentar de novo: nada é perdido em silêncio
+    (RF16)."""
+    valor_decimal = Decimal(pendencia.valor) / Decimal(100)
+
+    if pendencia.tipo == TipoTransacao.CONTA_PAGAR and pendencia.vencimento is not None:
+        try:
+            with SessaoLocal() as sessao_db:
+                servico_contas.cadastrar(
+                    sessao=sessao_db,
+                    usuario_id=usuario_id,
+                    dados=ContaCadastroEntrada(
+                        vencimento_em=pendencia.vencimento,
+                        valor=valor_decimal,
+                        descricao=(pendencia.descricao or pendencia.categoria)[:255],
+                        categoria_id=_categoria_do_app(sessao_db, pendencia),
+                    ),
+                )
+        except Exception:
+            logger.exception("Falha ao cadastrar conta a pagar do assistente")
+            _manter_rascunho(telefone, pendencia)
+            return mensagens.falha_ao_salvar()
+
+        sessao_assistente.limpar_pendencia(telefone)
+        return mensagens.confirmacao_sucesso_conta_pagar(
+            pendencia.valor, pendencia.vencimento, pendencia.categoria
+        )
+
     tipo_bd = (
         TipoTransacaoBD.ENTRADA
         if pendencia.tipo == TipoTransacao.RECEITA
         else TipoTransacaoBD.SAIDA
     )
-    valor_decimal = Decimal(pendencia.valor) / Decimal(100)
 
     try:
         with SessaoLocal() as sessao_db:
@@ -465,12 +681,16 @@ def registrar_confirmado(
     return mensagens.confirmacao_sucesso_gasto(pendencia.valor, pendencia.categoria)
 
 
-# RF14: fotos de comprovantes
+# RF14 / RF27: fotos de comprovantes e contas a pagar
 
 # Motivo dito à pessoa quando a foto não trouxe o dado (RF16)
 MOTIVOS_FOTO = {
     CampoFaltando.VALOR: "Não consegui ler o valor na foto.",
-    CampoFaltando.TIPO: "Não consegui saber pela foto se o dinheiro saiu ou entrou.",
+    CampoFaltando.TIPO: (
+        "Não consegui saber pela foto se já foi pago, se entrou dinheiro ou se é uma "
+        "conta a pagar."
+    ),
+    CampoFaltando.VENCIMENTO: "Não consegui ler a data de vencimento na foto.",
     CampoFaltando.CATEGORIA: "Não consegui saber pela foto com o que foi.",
 }
 
@@ -508,11 +728,18 @@ def responder_leitura(
     telefone: str, leitura: LeituraComprovante, legenda: str | None = None
 ) -> str:
     tipo = TipoTransacao(leitura.tipo) if leitura.tipo else TipoTransacao.DESCONHECIDO
+    if tipo == TipoTransacao.DESCONHECIDO and legenda:
+        tipo = identificar_tipo_resposta(legenda)
     if not leitura.categoria and legenda:
         # A legenda ("remédio", "mercado") diz com o que foi quando a foto não diz
         pela_legenda = identificar_categoria(normalizar_texto(legenda), tipo)
         if pela_legenda not in {"Outros", "Outras Receitas"}:
             leitura.categoria = pela_legenda
+    vencimento = leitura.vencimento
+    if vencimento is None and tipo == TipoTransacao.CONTA_PAGAR and legenda:
+        vencimento = extrair_vencimento(legenda)
+    if vencimento is not None and vencimento < vencimento_minimo(hoje_brasilia()):
+        vencimento = None
     pendencia = RegistroPendente(
         tipo=tipo,
         valor=leitura.valor,
@@ -520,6 +747,7 @@ def responder_leitura(
         descricao=leitura.descricao,
         criado=datetime.now(UTC),
         origem=OrigemTransacao.WHATSAPP_FOTO,
+        vencimento=vencimento,
     )
     falta = proximo_faltando(pendencia)
     if falta is None:
@@ -530,6 +758,7 @@ def responder_leitura(
             pendencia.categoria,
             pendencia.descricao,
             pendencia.origem,
+            pendencia.vencimento,
         )
 
     pendencia.faltando = falta

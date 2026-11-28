@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import styles from './Inicio.module.css';
 import {
   BarraNavegacao,
@@ -46,11 +46,6 @@ export const Inicio: React.FC = () => {
   // Confirmação visual depois de apagar um gasto (RF20 / #100)
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
 
-  // Transação nova (app, WhatsApp ou lançamento automático): recarrega da API (RF17)
-  useTempoReal(() => {
-    void recarregar();
-  });
-
   const [contas, setContas] = useState<ContaSaida[]>([]);
   const [carregandoContas, setCarregandoContas] = useState(true);
   const [metaDigitada, setMetaDigitada] = useState<string>('');
@@ -61,22 +56,26 @@ export const Inicio: React.FC = () => {
     null
   );
 
-  useEffect(() => {
-    let ativo = true;
-    listarContas()
-      .then((resultado) => {
-        if (ativo) setContas(resultado);
-      })
-      .catch(() => {
-        // Se a API falhar ou não estiver logado, segue com lista vazia
-      })
-      .finally(() => {
-        if (ativo) setCarregandoContas(false);
-      });
-    return () => {
-      ativo = false;
-    };
+  const carregarContas = useCallback(async () => {
+    try {
+      const resultado = await listarContas();
+      setContas(resultado);
+    } catch {
+      // Se a API falhar ou não estiver logado, segue com lista vazia
+    } finally {
+      setCarregandoContas(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void carregarContas();
+  }, [carregarContas]);
+
+  // Atualiza saldo e contas após alteração pelo assistente (RF17)
+  useTempoReal(() => {
+    void recarregar();
+    void carregarContas();
+  });
 
   // Contas ordenadas pelas mais próximas de vencer
   const contasMaisProximas = useMemo(() => {

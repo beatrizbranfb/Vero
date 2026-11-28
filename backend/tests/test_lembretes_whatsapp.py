@@ -16,7 +16,9 @@ from app.modulos.contas import servico as servico_contas
 from app.modulos.contas.modelos import Conta
 from app.modulos.identidade.modelos import Usuario
 from app.modulos.transacoes import servico, tarefas
-from app.modulos.transacoes.modelos import Transacao
+from app.modulos.transacoes.esquemas import CanalAviso, MomentoAviso
+from app.modulos.transacoes.modelos import Aviso, Transacao
+from app.nucleo.config import AdaptadorWhatsApp, settings
 
 
 @dataclass
@@ -101,6 +103,7 @@ def test_texto_do_lembrete_traz_descricao_e_valor_em_reais() -> None:
 
     assert "'Energia elétrica'" in texto
     assert "R$ 1.250,50" in texto
+    assert "Responda *pago* para dar baixa." in texto
 
 
 def test_texto_do_lembrete_sem_descricao() -> None:
@@ -108,6 +111,7 @@ def test_texto_do_lembrete_sem_descricao() -> None:
 
     assert "'sem descrição'" in texto
     assert "R$ 50,00" in texto
+    assert "Responda *pago* para dar baixa." in texto
 
 
 def test_busca_so_contas_de_hoje_nao_pagas(sessao: Session) -> None:
@@ -120,6 +124,32 @@ def test_busca_so_contas_de_hoje_nao_pagas(sessao: Session) -> None:
     contas = servico_contas.contas_em_aberto_entre(sessao, hoje, hoje)
 
     assert [c.id for c in contas if c.usuario_id == maria.id] == [de_hoje.id]
+
+
+def test_busca_contas_com_aviso_whatsapp_em_aberto_do_usuario(
+    sessao: Session,
+) -> None:
+    maria = _usuario(sessao, _telefone())
+    outra_pessoa = _usuario(sessao, _telefone())
+    conta_com_aviso = _conta(sessao, maria, _hoje(), "Conta de Luz")
+    conta_sem_aviso = _conta(sessao, maria, _hoje(), "Internet")
+    conta_paga = _conta(sessao, maria, _hoje(), "Aluguel", paga=True)
+    conta_de_outra_pessoa = _conta(sessao, outra_pessoa, _hoje(), "Água")
+    for conta in (conta_com_aviso, conta_paga, conta_de_outra_pessoa):
+        sessao.add(
+            Aviso(
+                conta_id=conta.id,
+                momento=MomentoAviso.NO_DIA,
+                canal=CanalAviso.WHATSAPP,
+                mensagem="Aviso de teste",
+            )
+        )
+    sessao.flush()
+
+    contas = servico.contas_com_aviso_whatsapp(sessao, maria.id)
+
+    assert [conta.id for conta in contas] == [conta_com_aviso.id]
+    assert conta_sem_aviso.id not in {conta.id for conta in contas}
 
 
 def test_envia_lembrete_para_quem_tem_telefone(
@@ -197,7 +227,10 @@ def test_falha_no_envio_nao_interrompe_os_demais(
     assert len(wpp.para(ok)) == 1
 
 
-def test_adaptador_falso_so_registra_no_log(caplog: pytest.LogCaptureFixture) -> None:
+def test_adaptador_falso_so_registra_no_log(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "ENVIO_WHATSAPP", AdaptadorWhatsApp.FALSO)
     wpp = obter_whatsapp()
     assert isinstance(wpp, WhatsAppFalso)
 

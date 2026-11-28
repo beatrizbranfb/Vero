@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 
@@ -11,6 +12,33 @@ def resposta_saldo(saldo: Decimal) -> str:
     if saldo >= 0:
         return f"Você tem *{valor}* disponíveis neste mês."
     return f"Neste mês, faltam *{valor}* para cobrir suas despesas."
+
+
+def pedir_escolha_conta(opcoes: list[str]) -> str:
+    linhas = ["Encontrei mais de uma conta com aviso. Qual você pagou?"]
+    linhas.extend(
+        f"{numero}. {descricao}" for numero, descricao in enumerate(opcoes, 1)
+    )
+    linhas.append("Responda com o número ou o nome da conta.")
+    return "\n".join(linhas)
+
+
+def conta_marcada_paga(descricao: str | None) -> str:
+    nome = descricao or "Sua conta"
+    return f"Pronto! Marquei *{nome}* como paga."
+
+
+def conta_ja_marcada_paga(descricao: str | None) -> str:
+    nome = descricao or "Essa conta"
+    return f"{nome} já está marcada como paga."
+
+
+def nenhuma_conta_para_pagar() -> str:
+    return "Não encontrei uma conta em aberto com aviso recente para dar baixa."
+
+
+def escolha_conta_cancelada() -> str:
+    return "Tudo bem, não dei baixa em nenhuma conta."
 
 
 def boas_vindas(nome: str | None = None) -> str:
@@ -50,6 +78,29 @@ def confirmacao_renda(valor_centavos: int, categoria: str) -> str:
 def confirmacao_sucesso_renda(valor_centavos: int, categoria: str) -> str:
     valor = formatar_moeda(valor_centavos)
     return f"Anotado! Já registrei a sua entrada de {valor} de {categoria}."
+
+
+def confirmacao_conta_pagar(
+    valor_centavos: int, vencimento: date, categoria: str
+) -> str:
+    valor = formatar_moeda(valor_centavos)
+    data = vencimento.strftime("%d/%m/%Y")
+    return (
+        f"Entendi! É uma conta de {categoria} no valor de {valor}, "
+        f"com vencimento em {data}.\n\n"
+        f"Posso agendar essa conta a pagar? (Responda com *Sim* ou *Não*)"
+    )
+
+
+def confirmacao_sucesso_conta_pagar(
+    valor_centavos: int, vencimento: date, categoria: str
+) -> str:
+    valor = formatar_moeda(valor_centavos)
+    data = vencimento.strftime("%d/%m/%Y")
+    return (
+        f"Anotado! Já agendei a sua conta de {categoria} de {valor} "
+        f"para vencer em {data}."
+    )
 
 
 def usuario_nao_encontrado() -> str:
@@ -133,20 +184,41 @@ def pedir_tipo(valor_centavos: int, motivo: str | None = None) -> str:
     motivo = motivo or "Não consegui saber se o dinheiro saiu ou entrou."
     return (
         f"{motivo}\n\n"
-        f"Esse valor de {formatar_moeda(valor_centavos)} foi um *gasto* ou uma *entrada*?"
+        f"Esse valor de {formatar_moeda(valor_centavos)} foi um *gasto* que você já fez, "
+        f"uma *entrada* ou uma *conta a pagar*?"
     )
 
 
 def tipo_ainda_nao_entendido() -> str:
     return (
         "Desculpe, não entendi.\n\n"
-        "Responda *gasto* se o dinheiro saiu ou *entrada* se o dinheiro entrou. "
+        "Responda *gasto* se você já pagou, *entrada* se o dinheiro entrou "
+        "ou *conta a pagar* se ainda vai vencer. Se preferir desistir, responda *cancelar*."
+    )
+
+
+def pedir_vencimento(valor_centavos: int, motivo: str | None = None) -> str:
+    motivo = motivo or "Não consegui ler a data de vencimento na foto."
+    return (
+        f"{motivo}\n\n"
+        f"Qual é a data de vencimento dessa conta de {formatar_moeda(valor_centavos)}? "
+        f"Pode mandar assim: *25/11* ou *25/11/2026*"
+    )
+
+
+def vencimento_ainda_nao_entendido() -> str:
+    return (
+        "Ainda não consegui entender a data de vencimento.\n\n"
+        "Mande uma data válida, por exemplo: *25/11* ou *25/11/2026*. "
         "Se preferir desistir, responda *cancelar*."
     )
 
 
 def pedir_categoria(
-    tipo_receita: bool, valor_centavos: int, motivo: str | None = None
+    tipo_receita: bool,
+    valor_centavos: int,
+    motivo: str | None = None,
+    conta_pagar: bool = False,
 ) -> str:
     motivo = motivo or "Não consegui saber com o que foi."
     exemplos = (
@@ -154,6 +226,12 @@ def pedir_categoria(
         if tipo_receita
         else "*mercado*, *farmácia* ou *luz*"
     )
+    if conta_pagar:
+        return (
+            f"{motivo}\n\n"
+            f"Com o que é essa conta de {formatar_moeda(valor_centavos)}? "
+            f"Por exemplo: {exemplos}"
+        )
     origem = "De onde veio" if tipo_receita else "Com o que foi"
     return (
         f"{motivo}\n\n"
