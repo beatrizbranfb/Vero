@@ -1,14 +1,19 @@
 import re
 import unicodedata
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from enum import StrEnum
+from zoneinfo import ZoneInfo
 
 from rapidfuzz import fuzz, process
+
+FUSO_BRASILIA = ZoneInfo("America/Sao_Paulo")
 
 
 class TipoTransacao(StrEnum):
     GASTO = "GASTO"
     RECEITA = "RECEITA"
+    CONTA_PAGAR = "CONTA_PAGAR"
     DESCONHECIDO = "DESCONHECIDO"
 
 
@@ -316,12 +321,13 @@ def extrair_valor(texto: str) -> tuple[int | None, bool]:
 def identificar_categoria(texto_normalizado: str, tipo: TipoTransacao) -> str:
     todas_palavras = texto_normalizado.split()
     melhor_score = 0.0
-    melhor_categoria = "Outros" if tipo == TipoTransacao.GASTO else "Outras Receitas"
+    eh_saida = tipo in (TipoTransacao.GASTO, TipoTransacao.CONTA_PAGAR)
+    melhor_categoria = "Outros" if eh_saida else "Outras Receitas"
 
     for categoria, sinonimos in CATEGORIAS.items():
         # Gasto não cai em categoria de entrada, e vice-versa (#136)
         de_receita = categoria in CATEGORIAS_RECEITA
-        if tipo == TipoTransacao.GASTO and de_receita:
+        if eh_saida and de_receita:
             continue
         if tipo == TipoTransacao.RECEITA and not de_receita:
             continue
@@ -406,20 +412,117 @@ def processar_texto_mensagem(texto: str) -> IntencaoMensagem:
     )
 
 
-RESPOSTAS_GASTO = ["gasto", "gastei", "saida", "despesa", "paguei", "compra", "comprei"]
+RESPOSTAS_GASTO = [
+    "gasto",
+    "gastei",
+    "saida",
+    "despesa",
+    "paguei",
+    "compra",
+    "comprei",
+    "comprovante",
+    "ja paguei",
+    "paga",
+]
 RESPOSTAS_RECEITA = ["entrada", "recebi", "receita", "ganhei", "rendimento", "caiu"]
+RESPOSTAS_CONTA_PAGAR = [
+    "conta a pagar",
+    "a pagar",
+    "para pagar",
+    "pra pagar",
+    "boleto",
+    "fatura",
+    "agendar",
+    "pendencia",
+    "conta",
+]
 
 
 def identificar_tipo_resposta(texto: str) -> TipoTransacao:
-    """Lê a resposta a "foi um gasto ou uma entrada?" (RF16)."""
+    """Lê a resposta a "foi um gasto, uma entrada ou uma conta a pagar?" (RF16, RF27)."""
     texto_norm = normalizar_texto(texto)
     gasto = contem_palavra(texto_norm, RESPOSTAS_GASTO)
     receita = contem_palavra(texto_norm, RESPOSTAS_RECEITA)
-    if gasto and not receita:
+    conta_pagar = contem_palavra(texto_norm, RESPOSTAS_CONTA_PAGAR)
+    if gasto and not receita and not conta_pagar:
         return TipoTransacao.GASTO
-    if receita and not gasto:
+    if receita and not gasto and not conta_pagar:
         return TipoTransacao.RECEITA
+    if conta_pagar and not receita and not gasto:
+        return TipoTransacao.CONTA_PAGAR
+    if conta_pagar and gasto and not receita:
+        if any(p in texto_norm for p in ("paguei", "gastei", "comprovante", "ja paga")):
+            return TipoTransacao.GASTO
     return TipoTransacao.DESCONHECIDO
+
+
+def extrair_vencimento(
+    texto: str,
+    referencia: date | None = None,
+    aceitar_dia_isolado: bool = False,
+) -> date | None:
+    """Extrai a data de vencimento de uma conta (RF27 / RF16).
+
+    Aceita 'hoje', 'amanhã', 'DD/MM/AAAA', 'DD/MM/AA', 'DD/MM' e 'dia DD' (ou só o
+    número do dia quando `aceitar_dia_isolado=True`).
+    """
+    hoje = referencia or datetime.now(FUSO_BRASILIA).date()
+    texto_norm = normalizar_texto(texto.strip())
+    if not texto_norm:
+        return None
+
+    if re.search(r"\bhoje\b", texto_norm):
+        return hoje
+    if re.search(r"\bamanha\b", texto_norm):
+        return hoje + timedelta(days=1)
+
+    completa = re.search(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b", texto_norm)
+    if completa:
+        dia, mes, ano = (int(g) for g in completa.groups())
+        if ano < 100:
+            ano += 2000
+        try:
+            return date(ano, mes, dia)
+        except ValueError:
+            return None
+
+    dia_mes = re.search(r"\b(\d{1,2})[/-](\d{1,2})\b", texto_norm)
+    if dia_mes:
+        dia, mes = (int(g) for g in dia_mes.groups())
+        minimo = (
+            date(hoje.year - 1, 12, 1)
+            if hoje.month == 1
+            else date(hoje.year, hoje.month - 1, 1)
+        )
+        try:
+            candidato = date(hoje.year, mes, dia)
+        except ValueError:
+            return None
+        if candidato < minimo:
+            try:
+                return date(hoje.year + 1, mes, dia)
+            except ValueError:
+                return None
+        return candidato
+
+    padrao_dia = r"\bdia\s+(\d{1,2})\b"
+    match_dia = re.search(padrao_dia, texto_norm)
+    if not match_dia and aceitar_dia_isolado:
+        match_dia = re.fullmatch(r"\s*(\d{1,2})\s*", texto_norm)
+    if match_dia:
+        dia = int(match_dia.group(1))
+        ano, mes = hoje.year, hoje.month
+        if dia < hoje.day:
+            if mes == 12:
+                mes, ano = 1, ano + 1
+            else:
+                mes += 1
+        try:
+            return date(ano, mes, dia)
+        except ValueError:
+            return None
+
+    return None
 
 
 # Valor por extenso (#135): muita gente escreve "trinta" em vez de "30"

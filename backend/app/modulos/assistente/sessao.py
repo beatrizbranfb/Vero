@@ -3,7 +3,7 @@ import logging
 import re
 import unicodedata
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 
 import valkey
@@ -22,6 +22,7 @@ class CampoFaltando(StrEnum):
 
     VALOR = "valor"
     TIPO = "tipo"
+    VENCIMENTO = "vencimento"
     CATEGORIA = "categoria"
 
 
@@ -51,6 +52,8 @@ class RegistroPendente:
     # Preenchido quando o lançamento está incompleto: o assistente pediu este dado
     # e a próxima mensagem completa o lançamento, em vez de começar outro (RF16)
     faltando: CampoFaltando | None = None
+    # Preenchido quando tipo == CONTA_PAGAR (RF27)
+    vencimento: date | None = None
 
 
 class GerenciadorSessao:
@@ -141,6 +144,7 @@ class GerenciadorSessao:
         descricao: str,
         origem: OrigemTransacao = OrigemTransacao.WHATSAPP_TEXTO,
         faltando: CampoFaltando | None = None,
+        vencimento: date | None = None,
     ) -> None:
         agora = datetime.now(UTC)
         pendencia = RegistroPendente(
@@ -151,6 +155,7 @@ class GerenciadorSessao:
             criado=agora,
             faltando=faltando,
             origem=origem,
+            vencimento=vencimento,
         )
 
         if self._valkey:
@@ -161,6 +166,11 @@ class GerenciadorSessao:
                 dados["origem"] = dados["origem"].value
                 dados["faltando"] = (
                     dados["faltando"].value if dados["faltando"] is not None else None
+                )
+                dados["vencimento"] = (
+                    dados["vencimento"].isoformat()
+                    if dados["vencimento"] is not None
+                    else None
                 )
                 self._valkey.setex(
                     self._chave(telefone),
@@ -191,6 +201,7 @@ class GerenciadorSessao:
 
                     valor = dados.get("valor")
                     faltando = dados.get("faltando")
+                    vencimento = dados.get("vencimento")
                     return (
                         RegistroPendente(
                             tipo=TipoTransacao(dados["tipo"]),
@@ -203,6 +214,9 @@ class GerenciadorSessao:
                                 dados.get(
                                     "origem", OrigemTransacao.WHATSAPP_TEXTO.value
                                 )
+                            ),
+                            vencimento=(
+                                date.fromisoformat(vencimento) if vencimento else None
                             ),
                         ),
                         False,
