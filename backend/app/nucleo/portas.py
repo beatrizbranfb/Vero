@@ -5,6 +5,7 @@ em app/integracoes, e em desenvolvimento usam versões falsas (Quadro 7 do docum
 """
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Protocol
 
 
@@ -61,7 +62,8 @@ class LeituraComprovante:
 
     # Em centavos
     valor: int | None = None
-    # "GASTO", "RECEITA" ou vazio
+    # "GASTO", "RECEITA", "CONTA_PAGAR" ou vazio
     tipo: str = ""
     categoria: str = ""
     descricao: str = ""
+    vencimento: date | None = None
