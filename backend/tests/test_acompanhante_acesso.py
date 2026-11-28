@@ -292,7 +292,7 @@ def test_token_de_acompanhante_nao_vale_nas_rotas_do_titular(
     assert resposta.status_code == 403
 
 
-def test_acompanhante_nao_exclui_transacao(
+def test_acompanhante_nao_exclui_lancamento_do_titular(
     cliente: TestClient, sessao: Session, maria, ana
 ):
     maria, _ = maria
@@ -304,7 +304,87 @@ def test_acompanhante_nao_exclui_transacao(
         f"{TRANSACOES}/{gasto.id}", headers=_token(ana, id_titular=maria.id)
     )
     assert resposta.status_code == 403
+    assert "você mesmo anotou" in resposta.json()["detail"]
     assert sessao.get(Transacao, gasto.id) is not None
+    assert (
+        sessao.scalar(
+            select(Auditoria).where(
+                Auditoria.registro_id == gasto.id, Auditoria.acao == "excluiu"
+            )
+        )
+        is None
+    )
+
+
+def test_acompanhante_desfaz_o_proprio_lancamento_e_fica_auditado(
+    cliente: TestClient, sessao: Session, maria, ana
+):
+    maria, _ = maria
+    ana, _ = ana
+    _autorizar(sessao, maria, ana)
+    cabecalho = _token(ana, id_titular=maria.id)
+    criado = cliente.post(
+        TRANSACOES,
+        json={"tipo": "saida", "valor": "35.00", "origem": "manual"},
+        headers=cabecalho,
+    )
+    transacao_id = uuid.UUID(criado.json()["id"])
+
+    resposta = cliente.delete(f"{TRANSACOES}/{transacao_id}", headers=cabecalho)
+
+    assert resposta.status_code == 204
+    assert sessao.get(Transacao, transacao_id) is None
+    acoes = sessao.scalars(
+        select(Auditoria.acao)
+        .where(Auditoria.registro_id == transacao_id, Auditoria.autor_id == ana.id)
+        .order_by(Auditoria.id)
+    ).all()
+    assert acoes == ["criou", "excluiu"]
+
+
+def test_acompanhante_nao_exclui_lancamento_de_outro_acompanhante(
+    cliente: TestClient, sessao: Session, maria, ana
+):
+    maria, _ = maria
+    ana, _ = ana
+    pedro, _ = _pessoa(sessao, "Pedro")
+    _autorizar(sessao, maria, ana)
+    _autorizar(sessao, maria, pedro)
+    criado = cliente.post(
+        TRANSACOES,
+        json={"tipo": "saida", "valor": "20.00", "origem": "manual"},
+        headers=_token(pedro, id_titular=maria.id),
+    )
+
+    resposta = cliente.delete(
+        f"{TRANSACOES}/{criado.json()['id']}",
+        headers=_token(ana, id_titular=maria.id),
+    )
+    assert resposta.status_code == 403
+
+
+def test_titular_exclui_lancamento_feito_pelo_acompanhante(
+    cliente: TestClient, sessao: Session, maria, ana
+):
+    maria, _ = maria
+    ana, _ = ana
+    _autorizar(sessao, maria, ana)
+    criado = cliente.post(
+        TRANSACOES,
+        json={"tipo": "saida", "valor": "12.00", "origem": "manual"},
+        headers=_token(ana, id_titular=maria.id),
+    )
+    transacao_id = uuid.UUID(criado.json()["id"])
+
+    resposta = cliente.delete(f"{TRANSACOES}/{transacao_id}", headers=_token(maria))
+
+    assert resposta.status_code == 204
+    registro = sessao.scalar(
+        select(Auditoria).where(
+            Auditoria.registro_id == transacao_id, Auditoria.acao == "excluiu"
+        )
+    )
+    assert registro.autor_id == maria.id
 
 
 @pytest.mark.parametrize("titular", [None, "nao-e-um-uuid"])

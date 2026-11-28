@@ -7,8 +7,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.modulos.identidade.modelos import Usuario
-from app.modulos.identidade.seguranca import Acesso, acesso_aos_dados, usuario_atual
+from app.modulos.identidade.seguranca import Acesso, acesso_aos_dados
 from app.modulos.transacoes import servico
 from app.modulos.transacoes.esquemas import (
     SaldoMesSaida,
@@ -91,13 +90,17 @@ def editar(
 @router.delete("/{transacao_id}", status_code=status.HTTP_204_NO_CONTENT)
 def excluir(
     transacao_id: UUID,
-    usuario: Usuario = Depends(usuario_atual),
+    acesso: Acesso = Depends(acesso_aos_dados),
     sessao: Session = Depends(obter_sessao),
 ) -> None:
     try:
-        servico.excluir(sessao, usuario.id, transacao_id)
+        servico.excluir(sessao, acesso.titular.id, transacao_id, acesso.autor.id)
     except servico.TransacaoNaoEncontrada:
         raise _nao_encontrada() from None
+    except servico.TransacaoDeOutroAutor:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, Message.SO_QUEM_ANOTOU_APAGA.message
+        ) from None
 
 
 def _nao_encontrada() -> HTTPException:

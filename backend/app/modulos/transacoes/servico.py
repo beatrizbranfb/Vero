@@ -27,7 +27,7 @@ from app.modulos.transacoes.esquemas import (
 )
 from app.modulos.transacoes.modelos import Transacao
 from app.nucleo import eventos
-from app.nucleo.auditoria import Acao, registrar_acao
+from app.nucleo.auditoria import Acao, Auditoria, registrar_acao
 
 FUSO_BRASILIA = ZoneInfo("America/Sao_Paulo")
 ENTIDADE = "transacao"
@@ -43,6 +43,10 @@ class ReferenciaInexistente(Exception):
 
 class TransacaoNaoEncontrada(Exception):
     """A transação não existe ou é de outro usuário."""
+
+
+class TransacaoDeOutroAutor(Exception):
+    pass
 
 
 def registrar(
@@ -152,11 +156,32 @@ def excluir(
 ) -> None:
     """Apaga a transação. Se ela veio de um gasto fixo, a conta continua paga, então o
     lançamento automático não volta."""
-    sessao.delete(_buscar(sessao, usuario_id, transacao_id))
+    transacao = _buscar(sessao, usuario_id, transacao_id)
+    if (
+        autor_id is not None
+        and autor_id != usuario_id
+        and not _criada_por(sessao, transacao_id, autor_id)
+    ):
+        raise TransacaoDeOutroAutor
+    sessao.delete(transacao)
     registrar_acao(
         sessao, usuario_id, autor_id or usuario_id, ENTIDADE, transacao_id, Acao.EXCLUIU
     )
     sessao.commit()
+
+
+def _criada_por(sessao: Session, transacao_id: uuid.UUID, autor_id: uuid.UUID) -> bool:
+    return (
+        sessao.scalar(
+            select(Auditoria.id).where(
+                Auditoria.entidade == ENTIDADE,
+                Auditoria.registro_id == transacao_id,
+                Auditoria.autor_id == autor_id,
+                Auditoria.acao == Acao.CRIOU,
+            )
+        )
+        is not None
+    )
 
 
 def lancar_gastos_fixos(sessao: Session, hoje: date | None = None) -> int:
